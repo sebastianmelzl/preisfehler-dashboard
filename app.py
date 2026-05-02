@@ -59,9 +59,19 @@ def run_sync():
 
         unnotified = db.get_unnotified_deals()
         if unnotified:
-            active = [d for d in unnotified if not d["is_expired"] and d.get("source") == "preisfehler"]
-            if active:
-                notifier.notify_new_deals(active)
+            active_pf = [d for d in unnotified if not d["is_expired"] and d.get("source") == "preisfehler"]
+            if active_pf:
+                notifier.notify_new_deals(active_pf)
+
+            high_disc = [
+                d for d in unnotified
+                if not d["is_expired"]
+                and d.get("source") == "new"
+                and (d.get("discount_pct") or 0) >= 80
+            ]
+            if high_disc:
+                notifier.notify_high_discount_deals(high_disc)
+
             db.mark_notified([d["thread_id"] for d in unnotified])
 
         # General new deals (no Telegram notifications)

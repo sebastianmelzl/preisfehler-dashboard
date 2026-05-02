@@ -63,6 +63,35 @@ def notify_new_deals(deals):
         _send(text)
 
 
+def notify_high_discount_deals(deals):
+    """Send one Telegram message per new deal with ≥80% discount."""
+    for d in deals:
+        pct = d.get("discount_pct")
+        price = d.get("price")
+        next_best = d.get("next_best")
+        merchant = d.get("merchant", "?")
+        title = d.get("title", "")
+        url = d.get("url", "")
+        shop_url = d.get("shop_url", url)
+        temp = d.get("temperature", 0)
+
+        price_str = f"{price:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".") if price else "?"
+        orig_str = (
+            f" <s>{next_best:,.2f} €</s>".replace(",", "X").replace(".", ",").replace("X", ".")
+            if next_best and next_best > 0 else ""
+        )
+
+        text = (
+            f"💥 <b>-{pct}% Rabatt!</b>\n\n"
+            f"📦 {title}\n\n"
+            f"💰 <b>{price_str}</b>{orig_str} → <b>-{pct}%</b>\n"
+            f"🏪 {merchant}\n"
+            f"🌡 {temp:.0f}°\n\n"
+            f"🔗 <a href='{shop_url}'>Zum Shop</a>  |  <a href='{url}'>mydealz</a>"
+        )
+        _send(text)
+
+
 def send_test(token, chat_id):
     try:
         resp = requests.post(
