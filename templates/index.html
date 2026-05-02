@@ -431,6 +431,7 @@
       });
       intervalSaved.style.opacity = '1';
       setTimeout(() => { intervalSaved.style.opacity = '0'; }, 2000);
+      await loadSyncStatus();
     } catch {}
   });
 
