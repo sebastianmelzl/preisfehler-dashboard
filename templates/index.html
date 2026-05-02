@@ -468,6 +468,7 @@
         </div>`;
     }).join('');
     grid.style.display = 'grid';
+    loadSyncStatus();
   }
 
   function esc(s) {
@@ -480,9 +481,13 @@
       const s = await res.json();
       if (!s.last_sync) { syncStatus.textContent = 'Noch nicht synchronisiert'; return; }
       const ts = new Date(s.last_sync + 'Z').toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
-      syncStatus.textContent = s.is_running
-        ? '⏳ Läuft…'
-        : `✓ ${ts} · ${s.deals_found} Deals · ${s.deals_new} neu`;
+      if (s.is_running) {
+        syncStatus.textContent = '⏳ Läuft…';
+      } else {
+        const visible = grid.querySelectorAll('.card:not(.fading-out)').length;
+        const newTxt = s.deals_new > 0 ? ` · ${s.deals_new} neu` : '';
+        syncStatus.textContent = `✓ ${ts} · ${visible} sichtbar${newTxt}`;
+      }
       nextSyncTime = s.next_sync ? new Date(s.next_sync).getTime() : null;
     } catch {}
   }
