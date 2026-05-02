@@ -67,6 +67,10 @@ def init_db():
             conn.execute("ALTER TABLE deals ADD COLUMN link_host TEXT DEFAULT ''")
         except Exception:
             pass
+        try:
+            conn.execute("ALTER TABLE deals ADD COLUMN shop_url TEXT DEFAULT ''")
+        except Exception:
+            pass
     logger.info("Database initialised")
 
 
@@ -83,15 +87,15 @@ def upsert_deals(deals_data, source="preisfehler"):
                     """INSERT INTO deals
                        (thread_id, title, title_slug, price, next_best, discount_pct,
                         merchant, category, temperature, is_expired, is_hot,
-                        published_at, discovered_at, notified, url, source, link_host)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?)""",
+                        published_at, discovered_at, notified, url, source, link_host, shop_url)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?)""",
                     (
                         d["thread_id"], d["title"], d["title_slug"],
                         d["price"], d["next_best"], d["discount_pct"],
                         d["merchant"], d["category"], d["temperature"],
                         d["is_expired"], d["is_hot"], d["published_at"],
                         datetime.utcnow().isoformat(), d["url"], source,
-                        d.get("link_host", ""),
+                        d.get("link_host", ""), d.get("shop_url", ""),
                     ),
                 )
                 new_ids.append(d["thread_id"])

@@ -475,7 +475,7 @@
             ${isNew && d.published_at ? `<span class="posted-ago" data-published="${d.published_at}"></span>` : ''}
             ${expiresAt ? `<span class="expires-label">⏳ <span class="expires-countdown"></span></span>` : ''}
           </div>
-          ${d.link_host ? `<a class="shop-link" href="${d.url}" target="_blank" rel="noopener">🛒 ${esc(d.link_host)}</a>` : ''}
+          ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener">🛒 ${esc(d.link_host)}</a>` : ''}
           <div class="hot-bar-wrap">
             🌡 ${Math.round(d.temperature || 0)}°
             <div class="hot-bar-bg"><div class="hot-bar-fill" style="width:${barWidth}%"></div></div>
