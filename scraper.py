@@ -133,7 +133,11 @@ def fetch_new_deals(limit=50, retries=2):
         try:
             resp = sess.get(
                 "https://www.mydealz.de/deals-new",
-                headers={"Accept": "text/html"},
+                headers={
+                    "Accept": "text/html",
+                    "Cache-Control": "no-cache",
+                    "Pragma": "no-cache",
+                },
                 timeout=15,
             )
             resp.raise_for_status()
