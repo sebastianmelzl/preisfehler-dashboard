@@ -173,6 +173,29 @@
       color: var(--tg-fg);
     }
 
+    #btn-toggle-new {
+      background: var(--bg-input);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    #btn-toggle-new.active {
+      background: #1e2a3a;
+      border-color: #3b82f6;
+      color: #93c5fd;
+    }
+    body.light #btn-toggle-new.active {
+      background: #dbeafe;
+      border-color: #3b82f6;
+      color: #1d4ed8;
+    }
+
+    .badge-new { background: #1e3a5f; color: #93c5fd; }
+    body.light .badge-new { background: #dbeafe; color: #1d4ed8; }
+
+    .card.source-new {
+      border-left: 3px solid #3b82f6;
+    }
+
     .card-top {
       display: flex;
       justify-content: space-between;
@@ -305,6 +328,7 @@
       <span id="interval-saved">✓</span>
     </div>
     <button id="btn-theme">☀️ Hell</button>
+    <button id="btn-toggle-new">🆕 Neue Deals anzeigen</button>
     <button id="btn-toggle-expired">🙈 Abgelaufene ausblenden</button>
     <button id="btn-test-tg">📨 Telegram testen</button>
   </div>
@@ -354,9 +378,12 @@
   }
   startCountdown();
 
+  let showNewDeals = localStorage.getItem('showNewDeals') === 'true';
+
   async function loadDeals() {
     try {
-      const res = await fetch('/api/deals');
+      const url = showNewDeals ? '/api/deals?include_new=1' : '/api/deals';
+      const res = await fetch(url);
       if (!res.ok) throw new Error(res.status);
       const deals = await res.json();
       renderDeals(deals);
@@ -376,11 +403,14 @@
     grid.innerHTML = deals.map(d => {
       const expired = d.is_expired;
       const hot = d.is_hot;
+      const isNew = d.source === 'new';
       const badge = expired
         ? '<span class="badge badge-expired">Abgelaufen</span>'
-        : hot
-          ? '<span class="badge badge-hot">🔥 Hot</span>'
-          : '<span class="badge badge-active">Aktiv</span>';
+        : isNew
+          ? '<span class="badge badge-new">🆕 Neu</span>'
+          : hot
+            ? '<span class="badge badge-hot">🔥 Hot</span>'
+            : '<span class="badge badge-active">Aktiv</span>';
 
       const origPrice = d.next_best_fmt
         ? `<span class="price-orig">${d.next_best_fmt}</span>` : '';
@@ -390,7 +420,7 @@
       const barWidth = d.hot_bar_width || 0;
 
       return `
-        <div class="card${expired ? ' expired' : ''}">
+        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ''}">
           <div class="card-top">
             <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
             ${badge}
@@ -461,6 +491,23 @@
     }
     setTimeout(() => { btn.disabled = false; btn.textContent = '📨 Telegram testen'; }, 3000);
   });
+
+  // New deals toggle
+  const btnToggleNew = document.getElementById('btn-toggle-new');
+
+  function applyNewDealsToggle() {
+    btnToggleNew.classList.toggle('active', showNewDeals);
+    btnToggleNew.textContent = showNewDeals ? '🆕 Neue ausblenden' : '🆕 Neue Deals anzeigen';
+  }
+
+  btnToggleNew.addEventListener('click', async () => {
+    showNewDeals = !showNewDeals;
+    localStorage.setItem('showNewDeals', showNewDeals);
+    applyNewDealsToggle();
+    await loadDeals();
+  });
+
+  applyNewDealsToggle();
 
   // Theme toggle
   const btnTheme = document.getElementById('btn-theme');

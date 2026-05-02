@@ -49,9 +49,11 @@ def run_sync():
         return
     try:
         db.set_sync_status(True, message="Lädt Deals…")
+
+        # Preisfehler
         deals_raw, total = scraper.fetch_deals(limit=10)
         normalised = [_normalise(t) for t in deals_raw]
-        new_ids = db.upsert_deals(normalised)
+        new_ids = db.upsert_deals(normalised, source="preisfehler")
 
         unnotified = db.get_unnotified_deals()
         if unnotified:
@@ -59,6 +61,15 @@ def run_sync():
             if active:
                 notifier.notify_new_deals(active)
             db.mark_notified([d["thread_id"] for d in unnotified])
+
+        # General new deals (no Telegram notifications)
+        try:
+            new_raw, _ = scraper.fetch_new_deals(limit=20)
+            new_normalised = [_normalise(t) for t in new_raw]
+            db.upsert_deals(new_normalised, source="new")
+            db.cleanup_new_deals()
+        except Exception as e:
+            logger.warning("New deals fetch failed: %s", e)
 
         db.set_sync_status(
             False,
@@ -89,7 +100,8 @@ def index():
 
 @app.route("/api/deals")
 def api_deals():
-    raw = db.get_all_deals(limit=10)
+    include_new = request.args.get("include_new") == "1"
+    raw = db.get_all_deals(limit=10, include_new=include_new)
     if not raw:
         return jsonify([])
 

@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import logging
+import time
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -50,35 +51,41 @@ def init_db():
             conn.execute("ALTER TABLE sync_status ADD COLUMN sync_interval_minutes INTEGER DEFAULT NULL")
         except Exception:
             pass
+        try:
+            conn.execute("ALTER TABLE deals ADD COLUMN source TEXT DEFAULT 'preisfehler'")
+        except Exception:
+            pass
     logger.info("Database initialised")
 
 
-def upsert_deals(deals_data):
+def upsert_deals(deals_data, source="preisfehler"):
     """Insert new deals, update existing ones. Returns list of new thread_ids."""
     new_ids = []
     with get_conn() as conn:
         for d in deals_data:
             existing = conn.execute(
-                "SELECT thread_id FROM deals WHERE thread_id = ?", (d["thread_id"],)
+                "SELECT thread_id, source FROM deals WHERE thread_id = ?", (d["thread_id"],)
             ).fetchone()
             if existing is None:
                 conn.execute(
                     """INSERT INTO deals
                        (thread_id, title, title_slug, price, next_best, discount_pct,
                         merchant, category, temperature, is_expired, is_hot,
-                        published_at, discovered_at, notified, url)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)""",
+                        published_at, discovered_at, notified, url, source)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?)""",
                     (
                         d["thread_id"], d["title"], d["title_slug"],
                         d["price"], d["next_best"], d["discount_pct"],
                         d["merchant"], d["category"], d["temperature"],
                         d["is_expired"], d["is_hot"], d["published_at"],
-                        datetime.utcnow().isoformat(), d["url"],
+                        datetime.utcnow().isoformat(), d["url"], source,
                     ),
                 )
                 new_ids.append(d["thread_id"])
             else:
-                # Update volatile fields
+                # Never downgrade a preisfehler deal to a normal deal
+                if existing["source"] == "preisfehler" and source == "new":
+                    continue
                 conn.execute(
                     """UPDATE deals SET temperature=?, is_expired=?, is_hot=?
                        WHERE thread_id=?""",
@@ -106,12 +113,32 @@ def mark_notified(thread_ids):
         )
 
 
-def get_all_deals(limit=10):
+def get_all_deals(limit=10, include_new=False):
+    cutoff = int(time.time()) - 600  # 10 minutes ago
     with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT * FROM deals ORDER BY published_at DESC LIMIT ?", (limit,)
-        ).fetchall()
+        if include_new:
+            rows = conn.execute(
+                """SELECT * FROM deals
+                   WHERE source = 'preisfehler'
+                      OR (source = 'new' AND published_at >= ?)
+                   ORDER BY published_at DESC LIMIT ?""",
+                (cutoff, limit + 20),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM deals WHERE source = 'preisfehler' ORDER BY published_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
     return [dict(r) for r in rows]
+
+
+def cleanup_new_deals():
+    """Remove non-preisfehler deals older than 10 minutes."""
+    cutoff = int(time.time()) - 600
+    with get_conn() as conn:
+        conn.execute(
+            "DELETE FROM deals WHERE source = 'new' AND published_at < ?", (cutoff,)
+        )
 
 
 def set_sync_status(is_running, deals_found=0, deals_new=0, message=""):

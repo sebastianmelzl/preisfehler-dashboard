@@ -87,28 +87,18 @@ def _parse_deals(html_src):
     return deals
 
 
-def fetch_deals(limit=10, retries=2):
+def _fetch(variables, referer, limit, retries=2):
     for attempt in range(retries + 1):
         try:
             xsrf = _refresh_xsrf()
             sess = _get_session()
             resp = sess.post(
                 GRAPHQL_URL,
-                json={
-                    "query": GRAPHQL_QUERY,
-                    "variables": {
-                        "input": {
-                            "q": "Preisfehler",
-                            "sortBy": "new",
-                            "type": "Deal",
-                            "page": 1,
-                        }
-                    },
-                },
+                json={"query": GRAPHQL_QUERY, "variables": variables},
                 headers={
                     "X-XSRF-TOKEN": xsrf,
                     "Origin": "https://www.mydealz.de",
-                    "Referer": "https://www.mydealz.de/search?q=Preisfehler&sortby=new",
+                    "Referer": referer,
                     "Content-Type": "application/json",
                 },
                 timeout=20,
@@ -118,7 +108,7 @@ def fetch_deals(limit=10, retries=2):
             html_src = data["data"]["searchThreads"]["listHtml"]
             total = data["data"]["searchThreads"]["pagination"]["count"]
             deals = _parse_deals(html_src)[:limit]
-            logger.info("Fetched %d deals (total in DB: %d)", len(deals), total)
+            logger.info("Fetched %d deals (total: %d)", len(deals), total)
             return deals, total
         except Exception as e:
             logger.warning("Attempt %d failed: %s", attempt + 1, e)
@@ -126,6 +116,24 @@ def fetch_deals(limit=10, retries=2):
                 time.sleep(3)
             else:
                 raise
+
+
+def fetch_deals(limit=10, retries=2):
+    return _fetch(
+        variables={"input": {"q": "Preisfehler", "sortBy": "new", "type": "Deal", "page": 1}},
+        referer="https://www.mydealz.de/search?q=Preisfehler&sortby=new",
+        limit=limit,
+        retries=retries,
+    )
+
+
+def fetch_new_deals(limit=20, retries=2):
+    return _fetch(
+        variables={"input": {"sortBy": "new", "type": "Deal", "page": 1}},
+        referer="https://www.mydealz.de/neu",
+        limit=limit,
+        retries=retries,
+    )
 
 
 def deal_url(t):
