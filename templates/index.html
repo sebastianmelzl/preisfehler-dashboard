@@ -192,6 +192,16 @@
     .badge-new { background: #1e3a5f; color: #93c5fd; }
     body.light .badge-new { background: #dbeafe; color: #1d4ed8; }
 
+    .expires-label { color: #f97316; }
+    body.light .expires-label { color: #ea580c; }
+
+    .card.fading-out {
+      transition: opacity 0.8s, transform 0.8s;
+      opacity: 0;
+      transform: scale(0.97);
+      pointer-events: none;
+    }
+
     .card.source-new {
       border-left: 3px solid #3b82f6;
     }
@@ -443,9 +453,12 @@
         ? `<span class="discount">-${d.discount_pct}%</span>` : '';
 
       const barWidth = d.hot_bar_width || 0;
+      const expiresAt = isNew && d.discovered_at
+        ? new Date(d.discovered_at.endsWith('Z') ? d.discovered_at : d.discovered_at + 'Z').getTime() + 600000
+        : null;
 
       return `
-        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}">
+        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
           <div class="preisfehler-label">🚨 Preisfehler</div>
           <div class="card-top">
             <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
@@ -459,6 +472,7 @@
             <span>🏪 ${esc(d.merchant)}</span>
             <span>📂 ${esc(d.category || '–')}</span>
             <span>📅 ${d.published_fmt}</span>
+            ${expiresAt ? `<span class="expires-label">⏳ <span class="expires-countdown"></span></span>` : ''}
           </div>
           <div class="hot-bar-wrap">
             🌡 ${Math.round(d.temperature || 0)}°
@@ -535,6 +549,26 @@
   });
 
   applyNewDealsToggle();
+
+  // Per-card expiry countdown
+  setInterval(() => {
+    const now = Date.now();
+    document.querySelectorAll('.card[data-expires]').forEach(card => {
+      const exp = parseInt(card.dataset.expires);
+      const secs = Math.round((exp - now) / 1000);
+      const label = card.querySelector('.expires-countdown');
+      if (secs <= 0) {
+        if (!card.classList.contains('fading-out')) {
+          card.classList.add('fading-out');
+          setTimeout(() => card.remove(), 800);
+        }
+      } else if (label) {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        label.textContent = `verschwindet in ${m}:${String(s).padStart(2, '0')}`;
+      }
+    });
+  }, 1000);
 
   // Theme toggle
   const btnTheme = document.getElementById('btn-theme');
