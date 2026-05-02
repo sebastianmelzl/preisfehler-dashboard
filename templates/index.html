@@ -267,10 +267,17 @@
       font-weight: 600;
       line-height: 1.35;
       flex: 1;
+      overflow: hidden;
     }
     .title a {
       color: var(--text);
       text-decoration: none;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .title a:hover { color: var(--link-hover); }
 
