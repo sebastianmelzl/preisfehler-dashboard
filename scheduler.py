@@ -12,13 +12,13 @@ def start(sync_fn):
     _scheduler.add_job(
         sync_fn,
         trigger="interval",
-        minutes=2,
-        jitter=120,
+        seconds=30,
+        jitter=210,
         id="auto_sync",
         replace_existing=True,
     )
     _scheduler.start()
-    logger.info("Scheduler started – syncing every 2–4 minutes (random)")
+    logger.info("Scheduler started – syncing every 0:30–4:00 minutes (random)")
     return _scheduler
 
 
