@@ -92,6 +92,15 @@ def notify_high_discount_deals(deals):
         _send(text)
 
 
+def notify_scraper_warning(consecutive):
+    text = (
+        f"⚠️ <b>Scraper-Warnung</b>\n\n"
+        f"Die letzten <b>{consecutive} Syncs</b> haben 0 Preisfehler-Deals zurückgegeben.\n"
+        f"Möglicherweise hat mydealz die Seitenstruktur geändert und der Parser funktioniert nicht mehr."
+    )
+    _send(text)
+
+
 def send_test(token, chat_id):
     try:
         resp = requests.post(

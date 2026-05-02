@@ -57,6 +57,13 @@ def run_sync():
         normalised = [_normalise(t) for t in deals_raw]
         new_ids = db.upsert_deals(normalised, source="preisfehler")
 
+        if normalised:
+            db.reset_empty_sync()
+        else:
+            consecutive = db.increment_empty_sync()
+            if consecutive >= 3:
+                notifier.notify_scraper_warning(consecutive)
+
         unnotified = db.get_unnotified_deals()
         if unnotified:
             active_pf = [d for d in unnotified if not d["is_expired"] and d.get("source") == "preisfehler"]

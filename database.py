@@ -71,6 +71,10 @@ def init_db():
             conn.execute("ALTER TABLE deals ADD COLUMN shop_url TEXT DEFAULT ''")
         except Exception:
             pass
+        try:
+            conn.execute("ALTER TABLE sync_status ADD COLUMN consecutive_empty INTEGER DEFAULT 0")
+        except Exception:
+            pass
     logger.info("Database initialised")
 
 
@@ -192,5 +196,17 @@ def get_sync_status():
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM sync_status WHERE id=1").fetchone()
     return dict(row) if row else {}
+
+
+def increment_empty_sync():
+    with get_conn() as conn:
+        conn.execute("UPDATE sync_status SET consecutive_empty = consecutive_empty + 1 WHERE id=1")
+        row = conn.execute("SELECT consecutive_empty FROM sync_status WHERE id=1").fetchone()
+    return row["consecutive_empty"] if row else 0
+
+
+def reset_empty_sync():
+    with get_conn() as conn:
+        conn.execute("UPDATE sync_status SET consecutive_empty = 0 WHERE id=1")
 
 
