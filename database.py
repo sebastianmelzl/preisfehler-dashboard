@@ -194,8 +194,10 @@ def get_all_deals(include_new=False):
 
 
 def cleanup_new_deals():
-    """Remove non-preisfehler deals posted more than 10 minutes ago."""
-    cutoff = int(time.time()) - 600
+    """Remove non-preisfehler deals posted more than 1 hour ago.
+    Display still filters to 10-min window via published_at in get_all_deals,
+    but keeping records for 1h prevents re-insertion within the same lifecycle."""
+    cutoff = int(time.time()) - 3600
     with get_conn() as conn:
         conn.execute(
             "DELETE FROM deals WHERE source = 'new' AND published_at < ?", (cutoff,)

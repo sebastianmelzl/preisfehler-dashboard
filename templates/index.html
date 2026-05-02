@@ -697,15 +697,18 @@
           <thead><tr>
             <th>Zeit</th>
             <th>Neue Preisfehler</th>
+            <th>Neue Deals</th>
             <th>Status</th>
           </tr></thead>
           <tbody>${rows.map(r => {
             const t = new Date(r.synced_at + 'Z').toLocaleString('de-DE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
             const err = r.message && r.message !== '' && !r.message.startsWith('OK');
             const pfNew = r.preisfehler_new;
+            const ndNew = r.new_deals_new;
             return `<tr>
               <td>${t}</td>
               <td class="${pfNew > 0 ? 'log-num-pos' : 'log-zero'}">${pfNew > 0 ? '+' + pfNew : '–'}</td>
+              <td class="${ndNew > 0 ? 'log-num-pos' : 'log-zero'}">${ndNew > 0 ? '+' + ndNew : '–'}</td>
               <td class="${err ? 'log-error' : ''}">${err ? '❌ ' + esc(r.message) : '✓'}</td>
             </tr>`;
           }).join('')}</tbody>
