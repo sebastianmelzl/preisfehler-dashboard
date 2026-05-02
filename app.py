@@ -40,6 +40,7 @@ def _normalise(t):
         "is_hot": int(bool(t.get("isHot"))),
         "published_at": t.get("publishedAt") or 0,
         "url": scraper.deal_url(t),
+        "link_host": (t.get("linkHost") or "").lower(),
     }
 
 
