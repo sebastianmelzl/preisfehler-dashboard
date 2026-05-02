@@ -476,7 +476,7 @@
   }
   startCountdown();
 
-  let showNewDeals = localStorage.getItem('showNewDeals') === 'true';
+  let showNewDeals = localStorage.getItem('showNewDeals') !== 'false';
 
   async function loadDeals() {
     try {
@@ -681,7 +681,7 @@
 
   // Hide expired toggle
   const btnToggle = document.getElementById('btn-toggle-expired');
-  let hideExpired = localStorage.getItem('hideExpired') === 'true';
+  let hideExpired = localStorage.getItem('hideExpired') !== 'false';
 
   function applyToggle() {
     document.body.classList.toggle('hide-expired', hideExpired);
