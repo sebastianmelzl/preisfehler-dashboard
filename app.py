@@ -118,7 +118,9 @@ def api_sync():
 
 @app.route("/api/sync/status")
 def api_sync_status():
-    return jsonify(db.get_sync_status())
+    status = db.get_sync_status()
+    status["next_sync"] = sched.next_run()
+    return jsonify(status)
 
 
 @app.route("/api/interval", methods=["GET", "POST"])

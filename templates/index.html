@@ -238,6 +238,7 @@
   <h1>🚨 Preisfehler Dashboard</h1>
   <div class="header-right">
     <span id="sync-status">Lädt…</span>
+    <span id="sync-countdown" style="font-size:0.78rem;color:#64748b"></span>
     <button id="btn-sync">🔄 Jetzt syncen</button>
     <div class="interval-wrap">
       🔁
@@ -265,7 +266,23 @@
   const loading = document.getElementById('loading');
   const errorMsg = document.getElementById('error-msg');
   const syncStatus = document.getElementById('sync-status');
+  const syncCountdown = document.getElementById('sync-countdown');
   const btnSync = document.getElementById('btn-sync');
+
+  let nextSyncTime = null;
+
+  function startCountdown() {
+    clearInterval(startCountdown._timer);
+    startCountdown._timer = setInterval(() => {
+      if (!nextSyncTime) { syncCountdown.textContent = ''; return; }
+      const secs = Math.round((nextSyncTime - Date.now()) / 1000);
+      if (secs <= 0) { syncCountdown.textContent = ''; return; }
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      syncCountdown.textContent = `· nächster Sync in ${m}:${String(s).padStart(2,'0')}`;
+    }, 1000);
+  }
+  startCountdown();
 
   async function loadDeals() {
     try {
@@ -339,6 +356,7 @@
       syncStatus.textContent = s.is_running
         ? '⏳ Läuft…'
         : `✓ ${ts} · ${s.deals_found} Deals · ${s.deals_new} neu`;
+      nextSyncTime = s.next_sync ? new Date(s.next_sync).getTime() : null;
     } catch {}
   }
 

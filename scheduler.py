@@ -26,3 +26,12 @@ def reschedule(interval_minutes):
         return
     _scheduler.reschedule_job("auto_sync", trigger="interval", minutes=interval_minutes)
     logger.info("Scheduler rescheduled – syncing every %d minutes", interval_minutes)
+
+
+def next_run():
+    if _scheduler is None:
+        return None
+    job = _scheduler.get_job("auto_sync")
+    if job and job.next_run_time:
+        return job.next_run_time.isoformat()
+    return None
