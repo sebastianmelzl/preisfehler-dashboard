@@ -484,9 +484,9 @@
       if (s.is_running) {
         syncStatus.textContent = '⏳ Läuft…';
       } else {
-        const visible = grid.querySelectorAll('.card:not(.fading-out)').length;
-        const newTxt = s.deals_new > 0 ? ` · ${s.deals_new} neu` : '';
-        syncStatus.textContent = `✓ ${ts} · ${visible} sichtbar${newTxt}`;
+        const visible = Array.from(grid.querySelectorAll('.card:not(.fading-out)'))
+          .filter(c => getComputedStyle(c).display !== 'none').length;
+        syncStatus.textContent = `✓ ${ts} · ${visible} sichtbar`;
       }
       nextSyncTime = s.next_sync ? new Date(s.next_sync).getTime() : null;
     } catch {}
