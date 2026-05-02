@@ -165,7 +165,8 @@ def api_debug_components():
     try:
         import re
         sess = scraper._get_session()
-        resp = sess.get("https://www.mydealz.de/deals-new", headers={"Accept": "text/html"}, timeout=15)
+        import time as _time
+        resp = sess.get(f"https://www.mydealz.de/deals-new?_={int(_time.time())}", headers={"Accept": "text/html", "Cache-Control": "no-cache"}, timeout=15)
         names = re.findall(r'"name":"([^"]*Normalizer[^"]*)"', resp.text)
         counts = {}
         for n in names:
