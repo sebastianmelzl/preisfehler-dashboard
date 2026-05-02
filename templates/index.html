@@ -7,12 +7,61 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ---------- Dark theme (default) ---------- */
+    :root {
+      --bg:           #0f1117;
+      --bg-card:      #1a1f2e;
+      --bg-input:     #1e293b;
+      --bg-input-hover: #273549;
+      --border:       #2d3748;
+      --border-hover: #4a5568;
+      --text:         #e2e8f0;
+      --text-muted:   #94a3b8;
+      --text-faint:   #64748b;
+      --link-hover:   #93c5fd;
+      --price:        #34d399;
+      --discount-bg:  #1e3a5f;
+      --discount-fg:  #93c5fd;
+      --tg-bg:        #1a3a2a;
+      --tg-border:    #2d6a4f;
+      --tg-fg:        #6ee7b7;
+      --tg-hover:     #1f4a38;
+      --active-bg:    #1a2a1a;
+      --spinner-track:#334155;
+      --spinner-head: #93c5fd;
+    }
+
+    /* ---------- Light theme ---------- */
+    body.light {
+      --bg:           #f1f5f9;
+      --bg-card:      #ffffff;
+      --bg-input:     #e2e8f0;
+      --bg-input-hover: #cbd5e1;
+      --border:       #cbd5e1;
+      --border-hover: #94a3b8;
+      --text:         #0f172a;
+      --text-muted:   #475569;
+      --text-faint:   #64748b;
+      --link-hover:   #2563eb;
+      --price:        #059669;
+      --discount-bg:  #dbeafe;
+      --discount-fg:  #1d4ed8;
+      --tg-bg:        #dcfce7;
+      --tg-border:    #86efac;
+      --tg-fg:        #15803d;
+      --tg-hover:     #bbf7d0;
+      --active-bg:    #dcfce7;
+      --spinner-track:#cbd5e1;
+      --spinner-head: #2563eb;
+    }
+
     body {
-      background: #0f1117;
-      color: #e2e8f0;
+      background: var(--bg);
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       min-height: 100vh;
       padding: 24px 16px;
+      transition: background 0.2s, color 0.2s;
     }
 
     header {
@@ -40,40 +89,40 @@
 
     #sync-status {
       font-size: 0.78rem;
-      color: #94a3b8;
+      color: var(--text-muted);
     }
 
     button {
-      background: #1e293b;
-      color: #e2e8f0;
-      border: 1px solid #334155;
+      background: var(--bg-input);
+      color: var(--text);
+      border: 1px solid var(--border);
       border-radius: 8px;
       padding: 7px 14px;
       font-size: 0.82rem;
       cursor: pointer;
       transition: background 0.15s;
     }
-    button:hover { background: #273549; }
+    button:hover { background: var(--bg-input-hover); }
     button:disabled { opacity: 0.5; cursor: default; }
 
     #btn-test-tg {
-      background: #1a3a2a;
-      border-color: #2d6a4f;
-      color: #6ee7b7;
+      background: var(--tg-bg);
+      border-color: var(--tg-border);
+      color: var(--tg-fg);
     }
-    #btn-test-tg:hover { background: #1f4a38; }
+    #btn-test-tg:hover { background: var(--tg-hover); }
 
     .interval-wrap {
       display: flex;
       align-items: center;
       gap: 6px;
       font-size: 0.82rem;
-      color: #94a3b8;
+      color: var(--text-muted);
     }
     #interval-select {
-      background: #1e293b;
-      color: #e2e8f0;
-      border: 1px solid #334155;
+      background: var(--bg-input);
+      color: var(--text);
+      border: 1px solid var(--border);
       border-radius: 8px;
       padding: 6px 10px;
       font-size: 0.82rem;
@@ -81,7 +130,7 @@
     }
     #interval-saved {
       font-size: 0.75rem;
-      color: #6ee7b7;
+      color: var(--tg-fg);
       opacity: 0;
       transition: opacity 0.3s;
     }
@@ -95,16 +144,16 @@
     }
 
     .card {
-      background: #1a1f2e;
-      border: 1px solid #2d3748;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 14px;
       padding: 18px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, background 0.2s;
     }
-    .card:hover { border-color: #4a5568; }
+    .card:hover { border-color: var(--border-hover); }
 
     .card.expired {
       opacity: 0.45;
@@ -114,14 +163,14 @@
     body.hide-expired .card.expired { display: none; }
 
     #btn-toggle-expired {
-      background: #1e293b;
-      color: #94a3b8;
-      border: 1px solid #334155;
+      background: var(--bg-input);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
     }
     #btn-toggle-expired.active {
-      background: #1a2a1a;
-      border-color: #2d6a4f;
-      color: #6ee7b7;
+      background: var(--active-bg);
+      border-color: var(--tg-border);
+      color: var(--tg-fg);
     }
 
     .card-top {
@@ -138,10 +187,10 @@
       flex: 1;
     }
     .title a {
-      color: #e2e8f0;
+      color: var(--text);
       text-decoration: none;
     }
-    .title a:hover { color: #93c5fd; }
+    .title a:hover { color: var(--link-hover); }
 
     .badge {
       font-size: 0.68rem;
@@ -154,6 +203,9 @@
     .badge-hot { background: #7c2d12; color: #fca5a5; }
     .badge-expired { background: #374151; color: #9ca3af; }
     .badge-active { background: #14532d; color: #86efac; }
+    body.light .badge-hot    { background: #fee2e2; color: #991b1b; }
+    body.light .badge-expired{ background: #e2e8f0; color: #64748b; }
+    body.light .badge-active { background: #dcfce7; color: #15803d; }
 
     .price-row {
       display: flex;
@@ -164,25 +216,25 @@
     .price-current {
       font-size: 1.35rem;
       font-weight: 800;
-      color: #34d399;
+      color: var(--price);
     }
     .price-orig {
       font-size: 0.85rem;
-      color: #64748b;
+      color: var(--text-faint);
       text-decoration: line-through;
     }
     .discount {
       font-size: 0.78rem;
       font-weight: 700;
-      background: #1e3a5f;
-      color: #93c5fd;
+      background: var(--discount-bg);
+      color: var(--discount-fg);
       border-radius: 5px;
       padding: 2px 7px;
     }
 
     .meta {
       font-size: 0.76rem;
-      color: #64748b;
+      color: var(--text-faint);
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
@@ -194,12 +246,12 @@
       align-items: center;
       gap: 8px;
       font-size: 0.74rem;
-      color: #64748b;
+      color: var(--text-faint);
     }
     .hot-bar-bg {
       flex: 1;
       height: 5px;
-      background: #2d3748;
+      background: var(--border);
       border-radius: 3px;
       overflow: hidden;
     }
@@ -214,7 +266,7 @@
       max-width: 1100px;
       margin: 60px auto;
       text-align: center;
-      color: #64748b;
+      color: var(--text-faint);
       font-size: 0.9rem;
     }
     #error-msg { color: #f87171; display: none; }
@@ -222,8 +274,8 @@
     .spinner {
       display: inline-block;
       width: 20px; height: 20px;
-      border: 2px solid #334155;
-      border-top-color: #93c5fd;
+      border: 2px solid var(--spinner-track);
+      border-top-color: var(--spinner-head);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       vertical-align: middle;
@@ -252,6 +304,7 @@
       </select>
       <span id="interval-saved">✓</span>
     </div>
+    <button id="btn-theme">☀️ Hell</button>
     <button id="btn-toggle-expired">🙈 Abgelaufene ausblenden</button>
     <button id="btn-test-tg">📨 Telegram testen</button>
   </div>
@@ -408,6 +461,23 @@
     }
     setTimeout(() => { btn.disabled = false; btn.textContent = '📨 Telegram testen'; }, 3000);
   });
+
+  // Theme toggle
+  const btnTheme = document.getElementById('btn-theme');
+  let isLight = localStorage.getItem('theme') === 'light';
+
+  function applyTheme() {
+    document.body.classList.toggle('light', isLight);
+    btnTheme.textContent = isLight ? '🌙 Dunkel' : '☀️ Hell';
+  }
+
+  btnTheme.addEventListener('click', () => {
+    isLight = !isLight;
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    applyTheme();
+  });
+
+  applyTheme();
 
   // Hide expired toggle
   const btnToggle = document.getElementById('btn-toggle-expired');
