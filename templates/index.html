@@ -414,6 +414,60 @@
       vertical-align: middle;
       margin-right: 8px;
     }
+    #log-panel {
+      max-width: 1100px;
+      margin: 0 auto 24px;
+    }
+    .log-inner {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .log-header button {
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+    .log-header button:hover { background: var(--bg-input); color: var(--text); }
+    #log-table-wrap { overflow-x: auto; }
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+    .log-table th {
+      text-align: left;
+      padding: 8px 16px;
+      color: var(--text-faint);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .log-table td {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .log-table tr:last-child td { border-bottom: none; }
+    .log-table tr:hover td { background: var(--bg-input); }
+    .log-num-pos { color: #34d399; font-weight: 600; }
+    .log-error { color: #f87171; }
+
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
@@ -437,11 +491,22 @@
     </div>
     <div class="btn-group btn-group-icon">
       <button id="btn-sync" title="Jetzt syncen">🔄</button>
+      <button id="btn-log" title="Sync-Log anzeigen">📋</button>
       <button id="btn-theme" title="Theme wechseln">☀️</button>
       <button id="btn-test-tg" title="Telegram testen">📨</button>
     </div>
   </div>
 </header>
+
+<div id="log-panel" style="display:none">
+  <div class="log-inner">
+    <div class="log-header">
+      <span>Sync-Log</span>
+      <button id="btn-log-close">✕</button>
+    </div>
+    <div id="log-table-wrap"></div>
+  </div>
+</div>
 
 <div id="loading"><span class="spinner"></span>Deals werden geladen…</div>
 <div id="error-msg">Fehler beim Laden der Deals.</div>
@@ -612,6 +677,55 @@
       btn.textContent = '❌ Fehler';
     }
     setTimeout(() => { btn.disabled = false; btn.textContent = '📨 Telegram testen'; }, 3000);
+  });
+
+  // Sync log
+  const logPanel = document.getElementById('log-panel');
+  const logTableWrap = document.getElementById('log-table-wrap');
+
+  async function loadLog() {
+    try {
+      const res = await fetch('/api/sync/log');
+      const rows = await res.json();
+      if (!rows.length) {
+        logTableWrap.innerHTML = '<p style="padding:16px;color:var(--text-faint)">Noch keine Syncs aufgezeichnet.</p>';
+        return;
+      }
+      logTableWrap.innerHTML = `
+        <table class="log-table">
+          <thead><tr>
+            <th>Zeit</th>
+            <th>Preisfehler</th>
+            <th>PF neu</th>
+            <th>Neue Deals</th>
+            <th>ND neu</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody>${rows.map(r => {
+            const t = new Date(r.synced_at + 'Z').toLocaleString('de-DE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+            const err = r.message && r.message !== '' && !r.message.startsWith('OK');
+            return `<tr>
+              <td>${t}</td>
+              <td>${r.preisfehler_found}</td>
+              <td class="${r.preisfehler_new > 0 ? 'log-num-pos' : ''}">${r.preisfehler_new > 0 ? '+' + r.preisfehler_new : r.preisfehler_new}</td>
+              <td>${r.new_deals_found}</td>
+              <td class="${r.new_deals_new > 0 ? 'log-num-pos' : ''}">${r.new_deals_new > 0 ? '+' + r.new_deals_new : r.new_deals_new}</td>
+              <td class="${err ? 'log-error' : ''}">${err ? '❌ ' + esc(r.message) : '✓'}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`;
+    } catch {
+      logTableWrap.innerHTML = '<p style="padding:16px;color:#f87171">Fehler beim Laden.</p>';
+    }
+  }
+
+  document.getElementById('btn-log').addEventListener('click', async () => {
+    const open = logPanel.style.display !== 'none';
+    logPanel.style.display = open ? 'none' : 'block';
+    if (!open) await loadLog();
+  });
+  document.getElementById('btn-log-close').addEventListener('click', () => {
+    logPanel.style.display = 'none';
   });
 
   // New deals toggle

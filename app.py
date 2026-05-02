@@ -83,10 +83,13 @@ def run_sync():
             db.mark_notified([d["thread_id"] for d in unnotified])
 
         # General new deals (no Telegram notifications)
+        new_deals_found = 0
+        new_ids_new = []
         try:
             new_raw, _ = scraper.fetch_new_deals(limit=20)
             new_normalised = [_normalise(t) for t in new_raw]
-            db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
+            new_ids_new = db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
+            new_deals_found = len(new_normalised)
             db.cleanup_new_deals()
         except Exception as e:
             logger.warning("New deals fetch failed: %s", e)
@@ -97,9 +100,16 @@ def run_sync():
             deals_new=len(new_ids),
             message=f"OK – {len(new_ids)} neu",
         )
+        db.add_sync_log(
+            preisfehler_found=len(normalised),
+            preisfehler_new=len(new_ids),
+            new_deals_found=new_deals_found,
+            new_deals_new=len(new_ids_new),
+        )
         logger.info("Sync done: %d deals, %d new", len(normalised), len(new_ids))
     except Exception as e:
         db.set_sync_status(False, message=f"Fehler: {e}")
+        db.add_sync_log(0, 0, 0, 0, message=str(e))
         logger.error("Sync failed: %s", e)
     finally:
         _sync_lock.release()
@@ -157,6 +167,11 @@ def api_sync_status():
     return jsonify(status)
 
 
+
+
+@app.route("/api/sync/log")
+def api_sync_log():
+    return jsonify(db.get_sync_log())
 
 
 @app.route("/api/deals/<thread_id>/expire", methods=["POST"])

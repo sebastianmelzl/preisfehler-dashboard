@@ -46,6 +46,16 @@ def init_db():
             );
 
             INSERT OR IGNORE INTO sync_status (id) VALUES (1);
+
+            CREATE TABLE IF NOT EXISTS sync_log (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                synced_at        TEXT,
+                preisfehler_found INTEGER DEFAULT 0,
+                preisfehler_new  INTEGER DEFAULT 0,
+                new_deals_found  INTEGER DEFAULT 0,
+                new_deals_new    INTEGER DEFAULT 0,
+                message          TEXT DEFAULT ''
+            );
         """)
         try:
             conn.execute("ALTER TABLE sync_status ADD COLUMN sync_interval_minutes INTEGER DEFAULT NULL")
@@ -224,5 +234,25 @@ def increment_empty_sync():
 def reset_empty_sync():
     with get_conn() as conn:
         conn.execute("UPDATE sync_status SET consecutive_empty = 0 WHERE id=1")
+
+
+def add_sync_log(preisfehler_found, preisfehler_new, new_deals_found, new_deals_new, message=""):
+    with get_conn() as conn:
+        conn.execute(
+            """INSERT INTO sync_log
+               (synced_at, preisfehler_found, preisfehler_new, new_deals_found, new_deals_new, message)
+               VALUES (?,?,?,?,?,?)""",
+            (datetime.utcnow().isoformat(), preisfehler_found, preisfehler_new,
+             new_deals_found, new_deals_new, message),
+        )
+        conn.execute("DELETE FROM sync_log WHERE id NOT IN (SELECT id FROM sync_log ORDER BY id DESC LIMIT 100)")
+
+
+def get_sync_log():
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM sync_log ORDER BY id DESC LIMIT 100"
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
