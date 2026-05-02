@@ -111,6 +111,19 @@
       filter: grayscale(0.6);
     }
 
+    body.hide-expired .card.expired { display: none; }
+
+    #btn-toggle-expired {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+    }
+    #btn-toggle-expired.active {
+      background: #1a2a1a;
+      border-color: #2d6a4f;
+      color: #6ee7b7;
+    }
+
     .card-top {
       display: flex;
       justify-content: space-between;
@@ -238,6 +251,7 @@
       </select>
       <span id="interval-saved">✓</span>
     </div>
+    <button id="btn-toggle-expired">🙈 Abgelaufene ausblenden</button>
     <button id="btn-test-tg">📨 Telegram testen</button>
   </div>
 </header>
@@ -359,6 +373,24 @@
     }
     setTimeout(() => { btn.disabled = false; btn.textContent = '📨 Telegram testen'; }, 3000);
   });
+
+  // Hide expired toggle
+  const btnToggle = document.getElementById('btn-toggle-expired');
+  let hideExpired = localStorage.getItem('hideExpired') === 'true';
+
+  function applyToggle() {
+    document.body.classList.toggle('hide-expired', hideExpired);
+    btnToggle.classList.toggle('active', hideExpired);
+    btnToggle.textContent = hideExpired ? '👁 Abgelaufene anzeigen' : '🙈 Abgelaufene ausblenden';
+  }
+
+  btnToggle.addEventListener('click', () => {
+    hideExpired = !hideExpired;
+    localStorage.setItem('hideExpired', hideExpired);
+    applyToggle();
+  });
+
+  applyToggle();
 
   // Interval selector
   const intervalSelect = document.getElementById('interval-select');
