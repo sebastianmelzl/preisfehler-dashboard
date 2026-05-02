@@ -139,7 +139,7 @@ def api_sync_status():
 def api_interval():
     if request.method == "POST":
         minutes = int(request.json.get("minutes", 20))
-        minutes = max(5, min(120, minutes))
+        minutes = max(1, min(120, minutes))
         db.set_interval(minutes)
         sched.reschedule(minutes)
         return jsonify({"minutes": minutes})
