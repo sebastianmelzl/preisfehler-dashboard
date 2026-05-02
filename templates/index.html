@@ -270,13 +270,30 @@
   const btnSync = document.getElementById('btn-sync');
 
   let nextSyncTime = null;
+  let fastPolling = false;
 
   function startCountdown() {
     clearInterval(startCountdown._timer);
     startCountdown._timer = setInterval(() => {
       if (!nextSyncTime) { syncCountdown.textContent = ''; return; }
       const secs = Math.round((nextSyncTime - Date.now()) / 1000);
-      if (secs <= 0) { syncCountdown.textContent = ''; return; }
+      if (secs <= 0) {
+        syncCountdown.textContent = '· ⏳ synct…';
+        if (!fastPolling) {
+          fastPolling = true;
+          const poll = setInterval(async () => {
+            await loadSyncStatus();
+            const res = await fetch('/api/sync/status');
+            const s = await res.json();
+            if (!s.is_running && s.next_sync && new Date(s.next_sync).getTime() > Date.now()) {
+              clearInterval(poll);
+              fastPolling = false;
+              await loadDeals();
+            }
+          }, 2000);
+        }
+        return;
+      }
       const m = Math.floor(secs / 60);
       const s = secs % 60;
       syncCountdown.textContent = `· nächster Sync in ${m}:${String(s).padStart(2,'0')}`;
