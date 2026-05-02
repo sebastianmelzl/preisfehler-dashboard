@@ -232,6 +232,15 @@
       border-left: 3px solid #3b82f6;
     }
 
+    .card.new-this-sync {
+      background: linear-gradient(135deg, #0f1f15 80%, #0f2a1a 100%);
+      border-color: #22c55e55;
+    }
+    body.light .card.new-this-sync {
+      background: linear-gradient(135deg, #ffffff 80%, #f0fdf4 100%);
+      border-color: #22c55e88;
+    }
+
     body.showing-new .card.source-preisfehler {
       border: 1.5px solid #f97316;
       box-shadow: 0 0 0 1px #f9731622, 0 4px 20px #f9731618;
@@ -521,7 +530,7 @@
         : null;
 
       return `
-        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
+        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
           <div class="preisfehler-label">🚨 Preisfehler</div>
           ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}">✕</button>` : ''}
           <div class="card-top">
