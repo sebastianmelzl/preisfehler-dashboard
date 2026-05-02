@@ -697,8 +697,7 @@
             <th>Zeit</th>
             <th>Preisfehler</th>
             <th>PF neu</th>
-            <th>Neue Deals</th>
-            <th>ND neu</th>
+            <th>Feed (Neue Deals)</th>
             <th>Status</th>
           </tr></thead>
           <tbody>${rows.map(r => {
@@ -709,7 +708,6 @@
               <td>${r.preisfehler_found}</td>
               <td class="${r.preisfehler_new > 0 ? 'log-num-pos' : ''}">${r.preisfehler_new > 0 ? '+' + r.preisfehler_new : r.preisfehler_new}</td>
               <td>${r.new_deals_found}</td>
-              <td class="${r.new_deals_new > 0 ? 'log-num-pos' : ''}">${r.new_deals_new > 0 ? '+' + r.new_deals_new : r.new_deals_new}</td>
               <td class="${err ? 'log-error' : ''}">${err ? '❌ ' + esc(r.message) : '✓'}</td>
             </tr>`;
           }).join('')}</tbody>
