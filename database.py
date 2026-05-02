@@ -72,7 +72,7 @@ def upsert_deals(deals_data, source="preisfehler"):
     with get_conn() as conn:
         for d in deals_data:
             existing = conn.execute(
-                "SELECT thread_id, source FROM deals WHERE thread_id = ?", (d["thread_id"],)
+                "SELECT thread_id, source, manually_expired FROM deals WHERE thread_id = ?", (d["thread_id"],)
             ).fetchone()
             if existing is None:
                 conn.execute(
