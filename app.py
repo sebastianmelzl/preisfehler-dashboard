@@ -51,10 +51,9 @@ def run_sync():
         db.set_sync_status(True, message="Lädt Deals…")
 
         # Preisfehler
-        deals_raw, total = scraper.fetch_deals(limit=10)
+        deals_raw, total = scraper.fetch_deals(limit=50)
         normalised = [_normalise(t) for t in deals_raw]
         new_ids = db.upsert_deals(normalised, source="preisfehler")
-        db.expire_unseen_deals([d["thread_id"] for d in normalised])
 
         unnotified = db.get_unnotified_deals()
         if unnotified:
