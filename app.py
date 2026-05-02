@@ -138,12 +138,13 @@ def api_sync_status():
 @app.route("/api/interval", methods=["GET", "POST"])
 def api_interval():
     if request.method == "POST":
-        minutes = int(request.json.get("minutes", 20))
-        minutes = max(1, min(120, minutes))
-        db.set_interval(minutes)
-        sched.reschedule(minutes)
-        return jsonify({"minutes": minutes})
-    return jsonify({"minutes": db.get_interval()})
+        min_m = max(1, min(60, int(request.json.get("min", 2))))
+        max_m = max(min_m + 1, min(120, int(request.json.get("max", 4))))
+        db.set_interval(min_m, max_m)
+        sched.reschedule(min_m, max_m)
+        return jsonify({"min": min_m, "max": max_m})
+    min_val, max_val = db.get_interval()
+    return jsonify({"min": min_val, "max": max_val})
 
 
 @app.route("/api/telegram/test", methods=["POST"])
@@ -170,9 +171,11 @@ run_sync_async()
 
 # Start scheduler (always in production, only in main process locally)
 if os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("START_SCHEDULER"):
-    sched.start(run_sync, interval_minutes=db.get_interval())
+    _min, _max = db.get_interval()
+    sched.start(run_sync, min_minutes=_min, max_minutes=_max)
 
 if __name__ == "__main__":
     import scheduler as sched_local
-    sched_local.start(run_sync, interval_minutes=db.get_interval())
+    _min, _max = db.get_interval()
+    sched_local.start(run_sync, min_minutes=_min, max_minutes=_max)
     app.run(debug=False, port=5003)

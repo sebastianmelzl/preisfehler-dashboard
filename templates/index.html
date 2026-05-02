@@ -115,18 +115,19 @@
     .interval-wrap {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       font-size: 0.82rem;
       color: var(--text-muted);
     }
-    #interval-select {
+    .interval-input {
       background: var(--bg-input);
       color: var(--text);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 5px 8px;
       font-size: 0.82rem;
-      cursor: pointer;
+      width: 46px;
+      text-align: center;
     }
     #interval-saved {
       font-size: 0.75rem;
@@ -350,16 +351,10 @@
     <button id="btn-sync">🔄 Jetzt syncen</button>
     <div class="interval-wrap">
       🔁
-      <select id="interval-select">
-        <option value="1">alle 1 Min</option>
-        <option value="2">alle 2 Min</option>
-        <option value="5">alle 5 Min</option>
-        <option value="10">alle 10 Min</option>
-        <option value="15">alle 15 Min</option>
-        <option value="20" selected>alle 20 Min</option>
-        <option value="30">alle 30 Min</option>
-        <option value="60">alle 60 Min</option>
-      </select>
+      <input class="interval-input" id="interval-min" type="number" min="1" max="60" value="2">
+      <span>–</span>
+      <input class="interval-input" id="interval-max" type="number" min="2" max="120" value="4">
+      <span>Min</span>
       <span id="interval-saved">✓</span>
     </div>
     <button id="btn-theme">☀️ Hell</button>
@@ -606,29 +601,38 @@
   applyToggle();
 
   // Interval selector
-  const intervalSelect = document.getElementById('interval-select');
+  const intervalMin = document.getElementById('interval-min');
+  const intervalMax = document.getElementById('interval-max');
   const intervalSaved = document.getElementById('interval-saved');
 
   async function loadInterval() {
     try {
       const res = await fetch('/api/interval');
       const j = await res.json();
-      intervalSelect.value = String(j.minutes);
+      intervalMin.value = j.min;
+      intervalMax.value = j.max;
     } catch {}
   }
 
-  intervalSelect.addEventListener('change', async () => {
+  async function saveInterval() {
+    const min = Math.max(1, parseInt(intervalMin.value) || 2);
+    const max = Math.max(min + 1, parseInt(intervalMax.value) || 4);
+    intervalMin.value = min;
+    intervalMax.value = max;
     try {
       await fetch('/api/interval', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({minutes: parseInt(intervalSelect.value)}),
+        body: JSON.stringify({min, max}),
       });
       intervalSaved.style.opacity = '1';
       setTimeout(() => { intervalSaved.style.opacity = '0'; }, 2000);
       await loadSyncStatus();
     } catch {}
-  });
+  }
+
+  intervalMin.addEventListener('change', saveInterval);
+  intervalMax.addEventListener('change', saveInterval);
 
   loadDeals();
   loadSyncStatus();

@@ -52,6 +52,10 @@ def init_db():
         except Exception:
             pass
         try:
+            conn.execute("ALTER TABLE sync_status ADD COLUMN sync_interval_max INTEGER DEFAULT NULL")
+        except Exception:
+            pass
+        try:
             conn.execute("ALTER TABLE deals ADD COLUMN source TEXT DEFAULT 'preisfehler'")
         except Exception:
             pass
@@ -165,12 +169,19 @@ def get_sync_status():
 
 def get_interval():
     with get_conn() as conn:
-        row = conn.execute("SELECT sync_interval_minutes FROM sync_status WHERE id=1").fetchone()
-    if row and row["sync_interval_minutes"] is not None:
-        return row["sync_interval_minutes"]
-    return int(os.environ.get("SYNC_INTERVAL_MINUTES", 20))
+        row = conn.execute("SELECT sync_interval_minutes, sync_interval_max FROM sync_status WHERE id=1").fetchone()
+    min_default = int(os.environ.get("SYNC_INTERVAL_MIN", os.environ.get("SYNC_INTERVAL_MINUTES", 2)))
+    max_default = int(os.environ.get("SYNC_INTERVAL_MAX", 4))
+    if row:
+        min_val = row["sync_interval_minutes"] if row["sync_interval_minutes"] is not None else min_default
+        max_val = row["sync_interval_max"] if row["sync_interval_max"] is not None else max_default
+        return min_val, max_val
+    return min_default, max_default
 
 
-def set_interval(minutes):
+def set_interval(min_minutes, max_minutes):
     with get_conn() as conn:
-        conn.execute("UPDATE sync_status SET sync_interval_minutes=? WHERE id=1", (minutes,))
+        conn.execute(
+            "UPDATE sync_status SET sync_interval_minutes=?, sync_interval_max=? WHERE id=1",
+            (min_minutes, max_minutes),
+        )
