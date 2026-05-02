@@ -1,7 +1,6 @@
 import os
 import sqlite3
 import logging
-import time
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -114,15 +113,14 @@ def mark_notified(thread_ids):
 
 
 def get_all_deals(limit=10, include_new=False):
-    cutoff = int(time.time()) - 600  # 10 minutes ago
     with get_conn() as conn:
         if include_new:
             rows = conn.execute(
                 """SELECT * FROM deals
                    WHERE source = 'preisfehler'
-                      OR (source = 'new' AND published_at >= ?)
+                      OR (source = 'new' AND discovered_at >= datetime('now', '-10 minutes'))
                    ORDER BY published_at DESC LIMIT ?""",
-                (cutoff, limit + 20),
+                (limit + 20,),
             ).fetchall()
         else:
             rows = conn.execute(
@@ -133,11 +131,10 @@ def get_all_deals(limit=10, include_new=False):
 
 
 def cleanup_new_deals():
-    """Remove non-preisfehler deals older than 10 minutes."""
-    cutoff = int(time.time()) - 600
+    """Remove non-preisfehler deals discovered more than 10 minutes ago."""
     with get_conn() as conn:
         conn.execute(
-            "DELETE FROM deals WHERE source = 'new' AND published_at < ?", (cutoff,)
+            "DELETE FROM deals WHERE source = 'new' AND discovered_at < datetime('now', '-10 minutes')"
         )
 
 
