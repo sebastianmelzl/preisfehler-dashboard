@@ -151,11 +151,6 @@ def health():
 
 db.init_db()
 
-# Seed interval from env var (Railway sets this; UI can override at runtime)
-_env_interval = os.environ.get("SYNC_INTERVAL_MINUTES")
-if _env_interval:
-    db.set_interval(int(_env_interval))
-
 # Run initial sync in background at startup
 run_sync_async()
 

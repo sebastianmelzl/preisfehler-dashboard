@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import logging
 from datetime import datetime
@@ -40,14 +41,13 @@ def init_db():
                 deals_found          INTEGER DEFAULT 0,
                 deals_new            INTEGER DEFAULT 0,
                 message              TEXT DEFAULT '',
-                sync_interval_minutes INTEGER DEFAULT 20
+                sync_interval_minutes INTEGER DEFAULT NULL
             );
 
             INSERT OR IGNORE INTO sync_status (id) VALUES (1);
         """)
-        # migrate existing DBs that don't have the column yet
         try:
-            conn.execute("ALTER TABLE sync_status ADD COLUMN sync_interval_minutes INTEGER DEFAULT 20")
+            conn.execute("ALTER TABLE sync_status ADD COLUMN sync_interval_minutes INTEGER DEFAULT NULL")
         except Exception:
             pass
     logger.info("Database initialised")
@@ -139,7 +139,9 @@ def get_sync_status():
 def get_interval():
     with get_conn() as conn:
         row = conn.execute("SELECT sync_interval_minutes FROM sync_status WHERE id=1").fetchone()
-    return (row["sync_interval_minutes"] or 20) if row else 20
+    if row and row["sync_interval_minutes"] is not None:
+        return row["sync_interval_minutes"]
+    return int(os.environ.get("SYNC_INTERVAL_MINUTES", 20))
 
 
 def set_interval(minutes):
