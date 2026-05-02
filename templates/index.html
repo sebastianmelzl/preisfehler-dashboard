@@ -196,6 +196,29 @@
       border-left: 3px solid #3b82f6;
     }
 
+    body.showing-new .card.source-preisfehler {
+      border: 1.5px solid #f97316;
+      box-shadow: 0 0 0 1px #f9731622, 0 4px 20px #f9731618;
+      background: linear-gradient(135deg, #1a1f2e 80%, #2a1a0e 100%);
+    }
+    body.showing-new.light .card.source-preisfehler {
+      border: 1.5px solid #ea580c;
+      box-shadow: 0 0 0 1px #ea580c22, 0 4px 20px #ea580c18;
+      background: linear-gradient(135deg, #ffffff 80%, #fff7ed 100%);
+    }
+
+    .preisfehler-label {
+      display: none;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #f97316;
+      margin-bottom: 2px;
+    }
+    body.showing-new .card.source-preisfehler .preisfehler-label { display: block; }
+    body.showing-new.light .card.source-preisfehler .preisfehler-label { color: #ea580c; }
+
     .card-top {
       display: flex;
       justify-content: space-between;
@@ -422,7 +445,8 @@
       const barWidth = d.hot_bar_width || 0;
 
       return `
-        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ''}">
+        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}">
+          <div class="preisfehler-label">🚨 Preisfehler</div>
           <div class="card-top">
             <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
             ${badge}
@@ -499,6 +523,7 @@
 
   function applyNewDealsToggle() {
     btnToggleNew.classList.toggle('active', showNewDeals);
+    document.body.classList.toggle('showing-new', showNewDeals);
     btnToggleNew.textContent = showNewDeals ? '🆕 Neue ausblenden' : '🆕 Neue Deals anzeigen';
   }
 
