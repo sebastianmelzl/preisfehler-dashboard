@@ -83,13 +83,19 @@ def run_sync():
             db.mark_notified([d["thread_id"] for d in unnotified])
 
         # General new deals (no Telegram notifications)
-        new_deals_found = 0
-        new_ids_new = []
+        visible_new_count = 0
         try:
+            import time as _time
             new_raw, _ = scraper.fetch_new_deals(limit=20)
             new_normalised = [_normalise(t) for t in new_raw]
             new_ids_new = db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
-            new_deals_found = len(new_normalised)
+            # Only count truly new deals within the 10-min display window
+            cutoff = int(_time.time()) - 600
+            new_ids_set = set(new_ids_new)
+            visible_new_count = sum(
+                1 for d in new_normalised
+                if d["thread_id"] in new_ids_set and (d.get("published_at") or 0) >= cutoff
+            )
             db.cleanup_new_deals()
         except Exception as e:
             logger.warning("New deals fetch failed: %s", e)
@@ -103,8 +109,8 @@ def run_sync():
         db.add_sync_log(
             preisfehler_found=len(normalised),
             preisfehler_new=len(new_ids),
-            new_deals_found=new_deals_found,
-            new_deals_new=len(new_ids_new),
+            new_deals_found=0,
+            new_deals_new=visible_new_count,
         )
         logger.info("Sync done: %d deals, %d new", len(normalised), len(new_ids))
     except Exception as e:
