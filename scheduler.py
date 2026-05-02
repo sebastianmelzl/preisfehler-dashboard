@@ -1,24 +1,57 @@
 import logging
+import random
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.date import DateTrigger
 
 logger = logging.getLogger(__name__)
 
+BERLIN = ZoneInfo("Europe/Berlin")
+
 _scheduler = None
+_sync_fn = None
 
 
-def start(sync_fn):
-    global _scheduler
-    _scheduler = BackgroundScheduler(daemon=True)
+def _is_night():
+    now = datetime.now(BERLIN)
+    return now.hour < 6 or (now.hour == 23 and now.minute >= 59)
+
+
+def _next_delay_seconds():
+    if _is_night():
+        return 3600
+    return random.randint(30, 240)
+
+
+def _run_and_reschedule():
+    try:
+        _sync_fn()
+    finally:
+        _schedule_next()
+
+
+def _schedule_next():
+    delay = _next_delay_seconds()
+    run_at = datetime.now(BERLIN) + timedelta(seconds=delay)
     _scheduler.add_job(
-        sync_fn,
-        trigger="interval",
-        seconds=30,
-        jitter=210,
+        _run_and_reschedule,
+        trigger=DateTrigger(run_date=run_at),
         id="auto_sync",
         replace_existing=True,
     )
+    mode = "stündlich (Nacht)" if _is_night() else f"in {delay}s"
+    logger.info("Next sync scheduled %s", mode)
+
+
+def start(sync_fn):
+    global _scheduler, _sync_fn
+    _sync_fn = sync_fn
+    _scheduler = BackgroundScheduler(daemon=True)
     _scheduler.start()
-    logger.info("Scheduler started – syncing every 0:30–4:00 minutes (random)")
+    _schedule_next()
+    logger.info("Scheduler started – random 0:30–4:00 min (night: hourly)")
     return _scheduler
 
 
