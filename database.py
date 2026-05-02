@@ -115,12 +115,13 @@ def mark_notified(thread_ids):
 def get_all_deals(limit=10, include_new=False):
     with get_conn() as conn:
         if include_new:
+            cutoff = int(__import__('time').time()) - 600
             rows = conn.execute(
                 """SELECT * FROM deals
                    WHERE source = 'preisfehler'
-                      OR (source = 'new' AND discovered_at >= datetime('now', '-10 minutes'))
+                      OR (source = 'new' AND published_at >= ?)
                    ORDER BY published_at DESC LIMIT ?""",
-                (limit + 20,),
+                (cutoff, limit + 20),
             ).fetchall()
         else:
             rows = conn.execute(
@@ -131,10 +132,11 @@ def get_all_deals(limit=10, include_new=False):
 
 
 def cleanup_new_deals():
-    """Remove non-preisfehler deals discovered more than 10 minutes ago."""
+    """Remove non-preisfehler deals posted more than 10 minutes ago."""
+    cutoff = int(__import__('time').time()) - 600
     with get_conn() as conn:
         conn.execute(
-            "DELETE FROM deals WHERE source = 'new' AND discovered_at < datetime('now', '-10 minutes')"
+            "DELETE FROM deals WHERE source = 'new' AND published_at < ?", (cutoff,)
         )
 
 

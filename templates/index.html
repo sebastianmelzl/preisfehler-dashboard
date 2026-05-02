@@ -453,8 +453,8 @@
         ? `<span class="discount">-${d.discount_pct}%</span>` : '';
 
       const barWidth = d.hot_bar_width || 0;
-      const expiresAt = isNew && d.discovered_at
-        ? new Date(d.discovered_at.endsWith('Z') ? d.discovered_at : d.discovered_at + 'Z').getTime() + 600000
+      const expiresAt = isNew && d.published_at
+        ? d.published_at * 1000 + 600000
         : null;
 
       return `
