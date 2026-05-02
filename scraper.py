@@ -127,7 +127,7 @@ def fetch_deals(limit=10, retries=2):
     )
 
 
-def fetch_new_deals(limit=20, retries=2):
+def fetch_new_deals(limit=50, retries=2):
     sess = _get_session()
     for attempt in range(retries + 1):
         try:
