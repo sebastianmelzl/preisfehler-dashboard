@@ -101,7 +101,7 @@ def index():
 @app.route("/api/deals")
 def api_deals():
     include_new = request.args.get("include_new") == "1"
-    raw = db.get_all_deals(limit=10, include_new=include_new)
+    raw = db.get_all_deals(include_new=include_new)
     if not raw:
         return jsonify([])
 

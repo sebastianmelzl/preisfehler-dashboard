@@ -136,7 +136,7 @@ def mark_notified(thread_ids):
         )
 
 
-def get_all_deals(limit=10, include_new=False):
+def get_all_deals(include_new=False):
     with get_conn() as conn:
         if include_new:
             cutoff = int(time.time()) - 600
@@ -144,13 +144,12 @@ def get_all_deals(limit=10, include_new=False):
                 """SELECT * FROM deals
                    WHERE source = 'preisfehler'
                       OR (source = 'new' AND published_at >= ?)
-                   ORDER BY published_at DESC LIMIT ?""",
-                (cutoff, limit + 20),
+                   ORDER BY published_at DESC""",
+                (cutoff,),
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT * FROM deals WHERE source = 'preisfehler' ORDER BY published_at DESC LIMIT ?",
-                (limit,),
+                "SELECT * FROM deals WHERE source = 'preisfehler' ORDER BY published_at DESC"
             ).fetchall()
     return [dict(r) for r in rows]
 
