@@ -59,6 +59,10 @@ def init_db():
             conn.execute("ALTER TABLE deals ADD COLUMN source TEXT DEFAULT 'preisfehler'")
         except Exception:
             pass
+        try:
+            conn.execute("ALTER TABLE deals ADD COLUMN manually_expired INTEGER DEFAULT 0")
+        except Exception:
+            pass
     logger.info("Database initialised")
 
 
@@ -90,18 +94,27 @@ def upsert_deals(deals_data, source="preisfehler"):
                 # Never downgrade a preisfehler deal to a normal deal
                 if existing["source"] == "preisfehler" and source == "new":
                     continue
-                conn.execute(
-                    """UPDATE deals SET temperature=?, is_expired=?, is_hot=?
-                       WHERE thread_id=?""",
-                    (d["temperature"], d["is_expired"], d["is_hot"], d["thread_id"]),
-                )
+                # Don't overwrite manually expired deals
+                if existing["manually_expired"]:
+                    conn.execute(
+                        "UPDATE deals SET temperature=?, is_hot=? WHERE thread_id=?",
+                        (d["temperature"], d["is_hot"], d["thread_id"]),
+                    )
+                else:
+                    conn.execute(
+                        """UPDATE deals SET temperature=?, is_expired=?, is_hot=?
+                           WHERE thread_id=?""",
+                        (d["temperature"], d["is_expired"], d["is_hot"], d["thread_id"]),
+                    )
     return new_ids
 
 
 
 def mark_expired(thread_id):
     with get_conn() as conn:
-        conn.execute("UPDATE deals SET is_expired=1 WHERE thread_id=?", (thread_id,))
+        conn.execute(
+            "UPDATE deals SET is_expired=1, manually_expired=1 WHERE thread_id=?", (thread_id,)
+        )
 
 
 def get_unnotified_deals():
