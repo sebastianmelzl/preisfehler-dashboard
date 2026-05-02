@@ -466,6 +466,7 @@
     .log-table tr:last-child td { border-bottom: none; }
     .log-table tr:hover td { background: var(--bg-input); }
     .log-num-pos { color: #34d399; font-weight: 600; }
+    .log-zero { color: var(--text-faint); }
     .log-error { color: #f87171; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -695,19 +696,16 @@
         <table class="log-table">
           <thead><tr>
             <th>Zeit</th>
-            <th>Preisfehler</th>
-            <th>PF neu</th>
-            <th>Feed (Neue Deals)</th>
+            <th>Neue Preisfehler</th>
             <th>Status</th>
           </tr></thead>
           <tbody>${rows.map(r => {
             const t = new Date(r.synced_at + 'Z').toLocaleString('de-DE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
             const err = r.message && r.message !== '' && !r.message.startsWith('OK');
+            const pfNew = r.preisfehler_new;
             return `<tr>
               <td>${t}</td>
-              <td>${r.preisfehler_found}</td>
-              <td class="${r.preisfehler_new > 0 ? 'log-num-pos' : ''}">${r.preisfehler_new > 0 ? '+' + r.preisfehler_new : r.preisfehler_new}</td>
-              <td>${r.new_deals_found}</td>
+              <td class="${pfNew > 0 ? 'log-num-pos' : 'log-zero'}">${pfNew > 0 ? '+' + pfNew : '–'}</td>
               <td class="${err ? 'log-error' : ''}">${err ? '❌ ' + esc(r.message) : '✓'}</td>
             </tr>`;
           }).join('')}</tbody>
