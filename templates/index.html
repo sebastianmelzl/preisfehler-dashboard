@@ -72,45 +72,85 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
+      padding: 14px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
     header h1 {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 1.2em;
+    }
+
+    #sync-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    #sync-countdown {
+      font-size: 0.75rem;
+      color: var(--text-faint);
+      min-width: 150px;
+      white-space: nowrap;
     }
 
     .header-right {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
-    #sync-status {
-      font-size: 0.78rem;
-      color: var(--text-muted);
+    .btn-group {
+      display: flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 2px;
     }
 
     button {
-      background: var(--bg-input);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 7px 14px;
-      font-size: 0.82rem;
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      border-radius: 7px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
     }
-    button:hover { background: var(--bg-input-hover); }
-    button:disabled { opacity: 0.5; cursor: default; }
+    button:hover { background: var(--bg-input-hover); color: var(--text); }
+    button:disabled { opacity: 0.4; cursor: default; }
 
-    #btn-test-tg {
-      background: var(--tg-bg);
-      border-color: var(--tg-border);
+    .btn-group-icon button {
+      padding: 6px 9px;
+      font-size: 0.9rem;
+    }
+
+    #btn-test-tg:hover {
+      background: var(--tg-hover);
       color: var(--tg-fg);
     }
-    #btn-test-tg:hover { background: var(--tg-hover); }
 
 
     .grid {
@@ -140,30 +180,17 @@
 
     body.hide-expired .card.expired { display: none; }
 
-    #btn-toggle-expired {
-      background: var(--bg-input);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-    }
     #btn-toggle-expired.active {
-      background: var(--active-bg);
-      border-color: var(--tg-border);
+      background: var(--tg-hover);
       color: var(--tg-fg);
     }
 
-    #btn-toggle-new {
-      background: var(--bg-input);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-    }
     #btn-toggle-new.active {
       background: #1e2a3a;
-      border-color: #3b82f6;
       color: #93c5fd;
     }
     body.light #btn-toggle-new.active {
       background: #dbeafe;
-      border-color: #3b82f6;
       color: #1d4ed8;
     }
 
@@ -355,15 +382,23 @@
 <body>
 
 <header>
-  <h1>🚨 Preisfehler Dashboard</h1>
+  <div class="header-left">
+    <h1>🚨 Preisfehler</h1>
+    <div class="header-meta">
+      <span id="sync-status">Lädt…</span>
+      <span id="sync-countdown"></span>
+    </div>
+  </div>
   <div class="header-right">
-    <span id="sync-status">Lädt…</span>
-    <span id="sync-countdown" style="font-size:0.78rem;color:#64748b"></span>
-    <button id="btn-sync">🔄 Jetzt syncen</button>
-    <button id="btn-theme">☀️ Hell</button>
-    <button id="btn-toggle-new">🆕 Neue Deals anzeigen</button>
-    <button id="btn-toggle-expired">🙈 Abgelaufene ausblenden</button>
-    <button id="btn-test-tg">📨 Telegram testen</button>
+    <div class="btn-group">
+      <button id="btn-toggle-new" title="Neue Deals anzeigen">🆕 Neue Deals</button>
+      <button id="btn-toggle-expired" title="Abgelaufene aus-/einblenden">🙈 Abgelaufene</button>
+    </div>
+    <div class="btn-group btn-group-icon">
+      <button id="btn-sync" title="Jetzt syncen">🔄</button>
+      <button id="btn-theme" title="Theme wechseln">☀️</button>
+      <button id="btn-test-tg" title="Telegram testen">📨</button>
+    </div>
   </div>
 </header>
 
