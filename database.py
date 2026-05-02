@@ -175,6 +175,8 @@ def get_interval():
     if row:
         min_val = row["sync_interval_minutes"] if row["sync_interval_minutes"] is not None else min_default
         max_val = row["sync_interval_max"] if row["sync_interval_max"] is not None else max_default
+        if max_val <= min_val:
+            max_val = min_val + 2
         return min_val, max_val
     return min_default, max_default
 
