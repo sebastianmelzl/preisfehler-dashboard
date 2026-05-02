@@ -504,7 +504,7 @@
       const isNew = d.source === 'new';
       const badge = expired
         ? '<span class="badge badge-expired">Abgelaufen</span>'
-        : isNew
+        : d.is_new_this_sync
           ? '<span class="badge badge-new">🆕 Neu</span>'
           : hot
             ? '<span class="badge badge-hot">🔥 Hot</span>'

@@ -51,11 +51,12 @@ def run_sync():
         return
     try:
         db.set_sync_status(True, message="Lädt Deals…")
+        current_seq = db.next_sync_seq()
 
         # Preisfehler
         deals_raw, total = scraper.fetch_deals(limit=50)
         normalised = [_normalise(t) for t in deals_raw]
-        new_ids = db.upsert_deals(normalised, source="preisfehler")
+        new_ids = db.upsert_deals(normalised, source="preisfehler", sync_seq=current_seq)
 
         if normalised:
             db.reset_empty_sync()
@@ -85,7 +86,7 @@ def run_sync():
         try:
             new_raw, _ = scraper.fetch_new_deals(limit=20)
             new_normalised = [_normalise(t) for t in new_raw]
-            db.upsert_deals(new_normalised, source="new")
+            db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
             db.cleanup_new_deals()
         except Exception as e:
             logger.warning("New deals fetch failed: %s", e)
@@ -124,6 +125,7 @@ def api_deals():
     if not raw:
         return jsonify([])
 
+    current_seq = db.get_sync_status().get("sync_seq", 0)
     max_temp = max((d["temperature"] or 0) for d in raw) or 1
     result = []
     for d in raw:
@@ -137,6 +139,7 @@ def api_deals():
                 datetime.utcfromtimestamp(d["published_at"]).strftime("%d.%m.%Y")
                 if d["published_at"] else "?"
             ),
+            "is_new_this_sync": int(d.get("sync_seq") or 0) == current_seq and current_seq > 0,
         })
     return jsonify(result)
 

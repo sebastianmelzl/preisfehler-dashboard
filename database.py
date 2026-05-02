@@ -75,10 +75,26 @@ def init_db():
             conn.execute("ALTER TABLE sync_status ADD COLUMN consecutive_empty INTEGER DEFAULT 0")
         except Exception:
             pass
+        try:
+            conn.execute("ALTER TABLE sync_status ADD COLUMN sync_seq INTEGER DEFAULT 0")
+        except Exception:
+            pass
+        try:
+            conn.execute("ALTER TABLE deals ADD COLUMN sync_seq INTEGER DEFAULT 0")
+        except Exception:
+            pass
     logger.info("Database initialised")
 
 
-def upsert_deals(deals_data, source="preisfehler"):
+def next_sync_seq():
+    """Increment and return the new sync sequence number."""
+    with get_conn() as conn:
+        conn.execute("UPDATE sync_status SET sync_seq = sync_seq + 1 WHERE id=1")
+        row = conn.execute("SELECT sync_seq FROM sync_status WHERE id=1").fetchone()
+    return row["sync_seq"] if row else 1
+
+
+def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
     """Insert new deals, update existing ones. Returns list of new thread_ids."""
     new_ids = []
     with get_conn() as conn:
@@ -91,15 +107,15 @@ def upsert_deals(deals_data, source="preisfehler"):
                     """INSERT INTO deals
                        (thread_id, title, title_slug, price, next_best, discount_pct,
                         merchant, category, temperature, is_expired, is_hot,
-                        published_at, discovered_at, notified, url, source, link_host, shop_url)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?)""",
+                        published_at, discovered_at, notified, url, source, link_host, shop_url, sync_seq)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)""",
                     (
                         d["thread_id"], d["title"], d["title_slug"],
                         d["price"], d["next_best"], d["discount_pct"],
                         d["merchant"], d["category"], d["temperature"],
                         d["is_expired"], d["is_hot"], d["published_at"],
                         datetime.utcnow().isoformat(), d["url"], source,
-                        d.get("link_host", ""), d.get("shop_url", ""),
+                        d.get("link_host", ""), d.get("shop_url", ""), sync_seq,
                     ),
                 )
                 new_ids.append(d["thread_id"])
