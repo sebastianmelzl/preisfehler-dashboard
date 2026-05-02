@@ -167,23 +167,3 @@ def get_sync_status():
     return dict(row) if row else {}
 
 
-def get_interval():
-    with get_conn() as conn:
-        row = conn.execute("SELECT sync_interval_minutes, sync_interval_max FROM sync_status WHERE id=1").fetchone()
-    min_default = int(os.environ.get("SYNC_INTERVAL_MIN", os.environ.get("SYNC_INTERVAL_MINUTES", 2)))
-    max_default = int(os.environ.get("SYNC_INTERVAL_MAX", 4))
-    if row:
-        min_val = row["sync_interval_minutes"] if row["sync_interval_minutes"] is not None else min_default
-        max_val = row["sync_interval_max"] if row["sync_interval_max"] is not None else max_default
-        if max_val <= min_val:
-            max_val = min_val + 2
-        return min_val, max_val
-    return min_default, max_default
-
-
-def set_interval(min_minutes, max_minutes):
-    with get_conn() as conn:
-        conn.execute(
-            "UPDATE sync_status SET sync_interval_minutes=?, sync_interval_max=? WHERE id=1",
-            (min_minutes, max_minutes),
-        )

@@ -112,29 +112,6 @@
     }
     #btn-test-tg:hover { background: var(--tg-hover); }
 
-    .interval-wrap {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 0.82rem;
-      color: var(--text-muted);
-    }
-    .interval-input {
-      background: var(--bg-input);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 5px 8px;
-      font-size: 0.82rem;
-      width: 46px;
-      text-align: center;
-    }
-    #interval-saved {
-      font-size: 0.75rem;
-      color: var(--tg-fg);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
 
     .grid {
       max-width: 1100px;
@@ -349,14 +326,6 @@
     <span id="sync-status">Lädt…</span>
     <span id="sync-countdown" style="font-size:0.78rem;color:#64748b"></span>
     <button id="btn-sync">🔄 Jetzt syncen</button>
-    <div class="interval-wrap">
-      🔁
-      <input class="interval-input" id="interval-min" type="number" min="1" max="60" value="2">
-      <span>–</span>
-      <input class="interval-input" id="interval-max" type="number" min="2" max="120" value="4">
-      <span>Min</span>
-      <span id="interval-saved">✓</span>
-    </div>
     <button id="btn-theme">☀️ Hell</button>
     <button id="btn-toggle-new">🆕 Neue Deals anzeigen</button>
     <button id="btn-toggle-expired">🙈 Abgelaufene ausblenden</button>
@@ -600,43 +569,9 @@
 
   applyToggle();
 
-  // Interval selector
-  const intervalMin = document.getElementById('interval-min');
-  const intervalMax = document.getElementById('interval-max');
-  const intervalSaved = document.getElementById('interval-saved');
-
-  async function loadInterval() {
-    try {
-      const res = await fetch('/api/interval');
-      const j = await res.json();
-      intervalMin.value = j.min;
-      intervalMax.value = j.max;
-    } catch {}
-  }
-
-  async function saveInterval() {
-    const min = Math.max(1, parseInt(intervalMin.value) || 2);
-    const max = Math.max(min + 1, parseInt(intervalMax.value) || 4);
-    intervalMin.value = min;
-    intervalMax.value = max;
-    try {
-      await fetch('/api/interval', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({min, max}),
-      });
-      intervalSaved.style.opacity = '1';
-      setTimeout(() => { intervalSaved.style.opacity = '0'; }, 2000);
-      await loadSyncStatus();
-    } catch {}
-  }
-
-  intervalMin.addEventListener('change', saveInterval);
-  intervalMax.addEventListener('change', saveInterval);
 
   loadDeals();
   loadSyncStatus();
-  loadInterval();
   setInterval(loadSyncStatus, 30000);
 </script>
 
