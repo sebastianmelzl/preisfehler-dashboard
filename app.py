@@ -57,7 +57,7 @@ def run_sync():
 
         unnotified = db.get_unnotified_deals()
         if unnotified:
-            active = [d for d in unnotified if not d["is_expired"]]
+            active = [d for d in unnotified if not d["is_expired"] and d.get("source") == "preisfehler"]
             if active:
                 notifier.notify_new_deals(active)
             db.mark_notified([d["thread_id"] for d in unnotified])
