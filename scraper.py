@@ -128,12 +128,24 @@ def fetch_deals(limit=10, retries=2):
 
 
 def fetch_new_deals(limit=20, retries=2):
-    return _fetch(
-        variables={"input": {"sortBy": "new", "type": "Deal", "page": 1}},
-        referer="https://www.mydealz.de/neu",
-        limit=limit,
-        retries=retries,
-    )
+    sess = _get_session()
+    for attempt in range(retries + 1):
+        try:
+            resp = sess.get(
+                "https://www.mydealz.de/new",
+                headers={"Accept": "text/html"},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            deals = _parse_deals(resp.text)[:limit]
+            logger.info("Fetched %d new deals from /new", len(deals))
+            return deals, len(deals)
+        except Exception as e:
+            logger.warning("fetch_new_deals attempt %d failed: %s", attempt + 1, e)
+            if attempt < retries:
+                time.sleep(3)
+            else:
+                raise
 
 
 def deal_url(t):
