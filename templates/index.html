@@ -103,11 +103,31 @@
       color: var(--text-muted);
     }
 
-    #sync-countdown {
-      font-size: 0.75rem;
+    .countdown-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .countdown-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
       color: var(--text-faint);
-      min-width: 150px;
-      white-space: nowrap;
+    }
+
+    #sync-countdown {
+      font-size: 2.6rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      font-family: ui-monospace, "SF Mono", "Fira Code", monospace;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1;
+      min-width: 5ch;
+      text-align: center;
     }
 
     .header-right {
@@ -393,8 +413,11 @@
     <h1>🚨 Preisfehler</h1>
     <div class="header-meta">
       <span id="sync-status">Lädt…</span>
-      <span id="sync-countdown"></span>
     </div>
+  </div>
+  <div class="countdown-block">
+    <div class="countdown-label">nächster Sync</div>
+    <div id="sync-countdown">–:––</div>
   </div>
   <div class="header-right">
     <div class="btn-group">
@@ -427,10 +450,10 @@
   function startCountdown() {
     clearInterval(startCountdown._timer);
     startCountdown._timer = setInterval(() => {
-      if (!nextSyncTime) { syncCountdown.textContent = ''; return; }
+      if (!nextSyncTime) { syncCountdown.textContent = '–:––'; return; }
       const secs = Math.round((nextSyncTime - Date.now()) / 1000);
       if (secs <= 0) {
-        syncCountdown.textContent = '· ⏳ synct…';
+        syncCountdown.textContent = '⏳';
         if (!fastPolling) {
           fastPolling = true;
           const poll = setInterval(async () => {
@@ -448,7 +471,7 @@
       }
       const m = Math.floor(secs / 60);
       const s = secs % 60;
-      syncCountdown.textContent = `· nächster Sync in ${m}:${String(s).padStart(2,'0')}`;
+      syncCountdown.textContent = `${m}:${String(s).padStart(2,'0')}`;
     }, 1000);
   }
   startCountdown();
