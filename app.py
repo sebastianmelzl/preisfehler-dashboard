@@ -85,18 +85,12 @@ def run_sync():
         # General new deals (no Telegram notifications)
         visible_new_count = 0
         try:
-            import time as _time
             new_raw, _ = scraper.fetch_new_deals(limit=20)
             new_normalised = [_normalise(t) for t in new_raw]
-            new_ids_new = db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
-            # Only count truly new deals within the 10-min display window
-            cutoff = int(_time.time()) - 600
-            new_ids_set = set(new_ids_new)
-            visible_new_count = sum(
-                1 for d in new_normalised
-                if d["thread_id"] in new_ids_set and (d.get("published_at") or 0) >= cutoff
-            )
+            db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
             db.cleanup_new_deals()
+            # Count exactly the deals shown with green background on dashboard
+            visible_new_count = db.count_visible_new_this_sync(current_seq)
         except Exception as e:
             logger.warning("New deals fetch failed: %s", e)
 

@@ -238,6 +238,17 @@ def reset_empty_sync():
         conn.execute("UPDATE sync_status SET consecutive_empty = 0 WHERE id=1")
 
 
+def count_visible_new_this_sync(sync_seq):
+    """Count source='new' deals that are new this sync AND within the 10-min display window."""
+    cutoff = int(time.time()) - 600
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) as cnt FROM deals WHERE source='new' AND sync_seq=? AND published_at>=?",
+            (sync_seq, cutoff),
+        ).fetchone()
+    return row["cnt"] if row else 0
+
+
 def add_sync_log(preisfehler_found, preisfehler_new, new_deals_found, new_deals_new, message=""):
     with get_conn() as conn:
         conn.execute(
