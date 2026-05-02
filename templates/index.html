@@ -63,6 +63,29 @@
     }
     #btn-test-tg:hover { background: #1f4a38; }
 
+    .interval-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+    #interval-select {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    #interval-saved {
+      font-size: 0.75rem;
+      color: #6ee7b7;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
     .grid {
       max-width: 1100px;
       margin: 0 auto;
@@ -203,6 +226,18 @@
   <div class="header-right">
     <span id="sync-status">Lädt…</span>
     <button id="btn-sync">🔄 Jetzt syncen</button>
+    <div class="interval-wrap">
+      🔁
+      <select id="interval-select">
+        <option value="5">alle 5 Min</option>
+        <option value="10">alle 10 Min</option>
+        <option value="15">alle 15 Min</option>
+        <option value="20" selected>alle 20 Min</option>
+        <option value="30">alle 30 Min</option>
+        <option value="60">alle 60 Min</option>
+      </select>
+      <span id="interval-saved">✓</span>
+    </div>
     <button id="btn-test-tg">📨 Telegram testen</button>
   </div>
 </header>
@@ -325,8 +360,33 @@
     setTimeout(() => { btn.disabled = false; btn.textContent = '📨 Telegram testen'; }, 3000);
   });
 
+  // Interval selector
+  const intervalSelect = document.getElementById('interval-select');
+  const intervalSaved = document.getElementById('interval-saved');
+
+  async function loadInterval() {
+    try {
+      const res = await fetch('/api/interval');
+      const j = await res.json();
+      intervalSelect.value = String(j.minutes);
+    } catch {}
+  }
+
+  intervalSelect.addEventListener('change', async () => {
+    try {
+      await fetch('/api/interval', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({minutes: parseInt(intervalSelect.value)}),
+      });
+      intervalSaved.style.opacity = '1';
+      setTimeout(() => { intervalSaved.style.opacity = '0'; }, 2000);
+    } catch {}
+  });
+
   loadDeals();
   loadSyncStatus();
+  loadInterval();
   setInterval(loadSyncStatus, 30000);
 </script>
 

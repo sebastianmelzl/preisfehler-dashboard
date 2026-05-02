@@ -34,16 +34,22 @@ def init_db():
             );
 
             CREATE TABLE IF NOT EXISTS sync_status (
-                id           INTEGER PRIMARY KEY DEFAULT 1,
-                is_running   INTEGER DEFAULT 0,
-                last_sync    TEXT,
-                deals_found  INTEGER DEFAULT 0,
-                deals_new    INTEGER DEFAULT 0,
-                message      TEXT DEFAULT ''
+                id                   INTEGER PRIMARY KEY DEFAULT 1,
+                is_running           INTEGER DEFAULT 0,
+                last_sync            TEXT,
+                deals_found          INTEGER DEFAULT 0,
+                deals_new            INTEGER DEFAULT 0,
+                message              TEXT DEFAULT '',
+                sync_interval_minutes INTEGER DEFAULT 20
             );
 
             INSERT OR IGNORE INTO sync_status (id) VALUES (1);
         """)
+        # migrate existing DBs that don't have the column yet
+        try:
+            conn.execute("ALTER TABLE sync_status ADD COLUMN sync_interval_minutes INTEGER DEFAULT 20")
+        except Exception:
+            pass
     logger.info("Database initialised")
 
 
@@ -128,3 +134,14 @@ def get_sync_status():
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM sync_status WHERE id=1").fetchone()
     return dict(row) if row else {}
+
+
+def get_interval():
+    with get_conn() as conn:
+        row = conn.execute("SELECT sync_interval_minutes FROM sync_status WHERE id=1").fetchone()
+    return (row["sync_interval_minutes"] or 20) if row else 20
+
+
+def set_interval(minutes):
+    with get_conn() as conn:
+        conn.execute("UPDATE sync_status SET sync_interval_minutes=? WHERE id=1", (minutes,))

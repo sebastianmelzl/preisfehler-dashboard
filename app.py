@@ -3,7 +3,7 @@ import os
 import threading
 from datetime import datetime
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 
 import database as db
 import notifier
@@ -121,6 +121,17 @@ def api_sync_status():
     return jsonify(db.get_sync_status())
 
 
+@app.route("/api/interval", methods=["GET", "POST"])
+def api_interval():
+    if request.method == "POST":
+        minutes = int(request.json.get("minutes", 20))
+        minutes = max(5, min(120, minutes))
+        db.set_interval(minutes)
+        sched.reschedule(minutes)
+        return jsonify({"minutes": minutes})
+    return jsonify({"minutes": db.get_interval()})
+
+
 @app.route("/api/telegram/test", methods=["POST"])
 def api_telegram_test():
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -145,9 +156,9 @@ run_sync_async()
 
 # Start scheduler (always in production, only in main process locally)
 if os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("START_SCHEDULER"):
-    sched.start(run_sync, interval_minutes=int(os.environ.get("SYNC_INTERVAL_MINUTES", 20)))
+    sched.start(run_sync, interval_minutes=db.get_interval())
 
 if __name__ == "__main__":
     import scheduler as sched_local
-    sched_local.start(run_sync, interval_minutes=20)
+    sched_local.start(run_sync, interval_minutes=db.get_interval())
     app.run(debug=False, port=5003)
