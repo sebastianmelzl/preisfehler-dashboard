@@ -98,6 +98,20 @@ def upsert_deals(deals_data, source="preisfehler"):
     return new_ids
 
 
+def expire_unseen_deals(seen_thread_ids):
+    """Mark active preisfehler deals not in the latest scrape as expired."""
+    if not seen_thread_ids:
+        return
+    placeholders = ",".join("?" * len(seen_thread_ids))
+    with get_conn() as conn:
+        conn.execute(
+            f"""UPDATE deals SET is_expired=1
+                WHERE source='preisfehler' AND is_expired=0
+                AND thread_id NOT IN ({placeholders})""",
+            seen_thread_ids,
+        )
+
+
 def get_unnotified_deals():
     with get_conn() as conn:
         rows = conn.execute(
