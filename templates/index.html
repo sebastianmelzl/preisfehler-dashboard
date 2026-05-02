@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preisfehler Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    header {
+      max-width: 1100px;
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    #sync-status {
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+
+    button {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover { background: #273549; }
+    button:disabled { opacity: 0.5; cursor: default; }
+
+    #btn-test-tg {
+      background: #1a3a2a;
+      border-color: #2d6a4f;
+      color: #6ee7b7;
+    }
+    #btn-test-tg:hover { background: #1f4a38; }
+
+    .grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: #4a5568; }
+
+    .card.expired {
+      opacity: 0.45;
+      filter: grayscale(0.6);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      line-height: 1.35;
+      flex: 1;
+    }
+    .title a {
+      color: #e2e8f0;
+      text-decoration: none;
+    }
+    .title a:hover { color: #93c5fd; }
+
+    .badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      border-radius: 5px;
+      padding: 2px 7px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .badge-hot { background: #7c2d12; color: #fca5a5; }
+    .badge-expired { background: #374151; color: #9ca3af; }
+    .badge-active { background: #14532d; color: #86efac; }
+
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .price-current {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #34d399;
+    }
+    .price-orig {
+      font-size: 0.85rem;
+      color: #64748b;
+      text-decoration: line-through;
+    }
+    .discount {
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #1e3a5f;
+      color: #93c5fd;
+      border-radius: 5px;
+      padding: 2px 7px;
+    }
+
+    .meta {
+      font-size: 0.76rem;
+      color: #64748b;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .meta span { display: flex; align-items: center; gap: 3px; }
+
+    .hot-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.74rem;
+      color: #64748b;
+    }
+    .hot-bar-bg {
+      flex: 1;
+      height: 5px;
+      background: #2d3748;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .hot-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f97316, #ef4444);
+      border-radius: 3px;
+      transition: width 0.4s;
+    }
+
+    #loading, #error-msg {
+      max-width: 1100px;
+      margin: 60px auto;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+    #error-msg { color: #f87171; display: none; }
+
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 2px solid #334155;
+      border-top-color: #93c5fd;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🚨 Preisfehler Dashboard</h1>
+  <div class="header-right">
+    <span id="sync-status">Lädt…</span>
+    <button id="btn-sync">🔄 Jetzt syncen</button>
+    <button id="btn-test-tg">📨 Telegram testen</button>
+  </div>
+</header>
+
+<div id="loading"><span class="spinner"></span>Deals werden geladen…</div>
+<div id="error-msg">Fehler beim Laden der Deals.</div>
+<div class="grid" id="grid" style="display:none"></div>
+
+<script>
+  const grid = document.getElementById('grid');
+  const loading = document.getElementById('loading');
+  const errorMsg = document.getElementById('error-msg');
+  const syncStatus = document.getElementById('sync-status');
+  const btnSync = document.getElementById('btn-sync');
+
+  async function loadDeals() {
+    try {
+      const res = await fetch('/api/deals');
+      if (!res.ok) throw new Error(res.status);
+      const deals = await res.json();
+      renderDeals(deals);
+    } catch (e) {
+      loading.style.display = 'none';
+      errorMsg.style.display = 'block';
+    }
+  }
+
+  function renderDeals(deals) {
+    loading.style.display = 'none';
+    if (!deals.length) {
+      grid.innerHTML = '<p style="color:#64748b;grid-column:1/-1;text-align:center">Keine Deals gefunden.</p>';
+      grid.style.display = 'grid';
+      return;
+    }
+    grid.innerHTML = deals.map(d => {
+      const expired = d.is_expired;
+      const hot = d.is_hot;
+      const badge = expired
+        ? '<span class="badge badge-expired">Abgelaufen</span>'
+        : hot
+          ? '<span class="badge badge-hot">🔥 Hot</span>'
+          : '<span class="badge badge-active">Aktiv</span>';
+
+      const origPrice = d.next_best_fmt
+        ? `<span class="price-orig">${d.next_best_fmt}</span>` : '';
+      const disc = d.discount_pct
+        ? `<span class="discount">-${d.discount_pct}%</span>` : '';
+
+      const barWidth = d.hot_bar_width || 0;
+
+      return `
+        <div class="card${expired ? ' expired' : ''}">
+          <div class="card-top">
+            <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
+            ${badge}
+          </div>
+          <div class="price-row">
+            <span class="price-current">${d.price_fmt}</span>
+            ${origPrice}${disc}
+          </div>
+          <div class="meta">
+            <span>🏪 ${esc(d.merchant)}</span>
+            <span>📂 ${esc(d.category || '–')}</span>
+            <span>📅 ${d.published_fmt}</span>
+          </div>
+          <div class="hot-bar-wrap">
+            🌡 ${Math.round(d.temperature || 0)}°
+            <div class="hot-bar-bg"><div class="hot-bar-fill" style="width:${barWidth}%"></div></div>
+          </div>
+        </div>`;
+    }).join('');
+    grid.style.display = 'grid';
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function loadSyncStatus() {
+    try {
+      const res = await fetch('/api/sync/status');
+      const s = await res.json();
+      if (!s.last_sync) { syncStatus.textContent = 'Noch nicht synchronisiert'; return; }
+      const ts = new Date(s.last_sync + 'Z').toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+      syncStatus.textContent = s.is_running
+        ? '⏳ Läuft…'
+        : `✓ ${ts} · ${s.deals_found} Deals · ${s.deals_new} neu`;
+    } catch {}
+  }
+
+  btnSync.addEventListener('click', async () => {
+    btnSync.disabled = true;
+    btnSync.textContent = '⏳ Läuft…';
+    await fetch('/api/sync', { method: 'POST' });
+    // Poll until sync done
+    const poll = setInterval(async () => {
+      await loadSyncStatus();
+      const res = await fetch('/api/sync/status');
+      const s = await res.json();
+      if (!s.is_running) {
+        clearInterval(poll);
+        btnSync.disabled = false;
+        btnSync.textContent = '🔄 Jetzt syncen';
+        await loadDeals();
+      }
+    }, 1500);
+  });
+
+  document.getElementById('btn-test-tg').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-test-tg');
+    btn.disabled = true;
+    btn.textContent = '⏳ Sende…';
+    try {
+      const res = await fetch('/api/telegram/test', { method: 'POST' });
+      const j = await res.json();
+      btn.textContent = j.ok ? '✅ Gesendet!' : `❌ ${j.message}`;
+    } catch {
+      btn.textContent = '❌ Fehler';
+    }
+    setTimeout(() => { btn.disabled = false; btn.textContent = '📨 Telegram testen'; }, 3000);
+  });
+
+  loadDeals();
+  loadSyncStatus();
+  setInterval(loadSyncStatus, 30000);
+</script>
+
+</body>
+</html>

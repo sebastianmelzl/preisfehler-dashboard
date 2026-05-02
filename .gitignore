@@ -1,0 +1,10 @@
+deals.db
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+venv/
+*.egg-info/
+dist/
+.DS_Store
