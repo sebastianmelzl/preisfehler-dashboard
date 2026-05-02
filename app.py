@@ -151,6 +151,15 @@ def api_telegram_test():
     return jsonify({"ok": ok, "message": msg})
 
 
+@app.route("/api/debug/new-deals")
+def api_debug_new_deals():
+    try:
+        deals, _ = scraper.fetch_new_deals(limit=50)
+        return jsonify([{"id": d.get("threadId"), "title": d.get("title"), "published": d.get("publishedAt")} for d in deals])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok"})
