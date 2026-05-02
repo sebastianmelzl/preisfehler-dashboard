@@ -160,6 +160,21 @@ def api_debug_new_deals():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/debug/components")
+def api_debug_components():
+    try:
+        import re
+        sess = scraper._get_session()
+        resp = sess.get("https://www.mydealz.de/deals-new", headers={"Accept": "text/html"}, timeout=15)
+        names = re.findall(r'"name":"([^"]*Normalizer[^"]*)"', resp.text)
+        counts = {}
+        for n in names:
+            counts[n] = counts.get(n, 0) + 1
+        return jsonify({"normalizers": counts, "total_chars": len(resp.text)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok"})
