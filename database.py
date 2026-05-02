@@ -99,6 +99,11 @@ def upsert_deals(deals_data, source="preisfehler"):
 
 
 
+def mark_expired(thread_id):
+    with get_conn() as conn:
+        conn.execute("UPDATE deals SET is_expired=1 WHERE thread_id=?", (thread_id,))
+
+
 def get_unnotified_deals():
     with get_conn() as conn:
         rows = conn.execute(

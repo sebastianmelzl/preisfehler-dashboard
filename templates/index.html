@@ -195,6 +195,26 @@
       background: linear-gradient(135deg, #ffffff 80%, #fff7ed 100%);
     }
 
+    .btn-expire {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+    .card { position: relative; }
+    .card:hover .btn-expire { opacity: 1; }
+    .btn-expire:hover { background: #7c2d1233; color: #fca5a5; opacity: 1; }
+    body.light .btn-expire:hover { background: #fee2e2; color: #991b1b; }
+
     .preisfehler-label {
       display: none;
       font-size: 0.68rem;
@@ -424,6 +444,7 @@
       return `
         <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
           <div class="preisfehler-label">🚨 Preisfehler</div>
+          ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}">✕</button>` : ''}
           <div class="card-top">
             <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
             ${badge}
@@ -513,6 +534,17 @@
   });
 
   applyNewDealsToggle();
+
+  // Manual expire buttons
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-expire');
+    if (!btn) return;
+    const threadId = btn.dataset.id;
+    await fetch(`/api/deals/${threadId}/expire`, {method: 'POST'});
+    const card = btn.closest('.card');
+    card.classList.add('expired');
+    btn.remove();
+  });
 
   // Per-card expiry countdown
   setInterval(() => {

@@ -137,6 +137,12 @@ def api_sync_status():
 
 
 
+@app.route("/api/deals/<thread_id>/expire", methods=["POST"])
+def api_expire_deal(thread_id):
+    db.mark_expired(thread_id)
+    return jsonify({"ok": True})
+
+
 @app.route("/api/telegram/test", methods=["POST"])
 def api_telegram_test():
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
