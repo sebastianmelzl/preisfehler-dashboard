@@ -82,6 +82,14 @@ def run_sync():
 
             db.mark_notified([d["thread_id"] for d in unnotified])
 
+        # Keyword notifications (all sources)
+        keywords = db.get_keywords()
+        if keywords:
+            kw_matches = db.get_unnotified_keyword_deals(keywords)
+            if kw_matches:
+                notifier.notify_keyword_matches(kw_matches)
+                db.mark_keyword_notified([d["thread_id"] for d in kw_matches])
+
         # General new deals (no Telegram notifications)
         visible_new_count = 0
         try:
@@ -136,6 +144,8 @@ def api_deals():
         return jsonify([])
 
     current_seq = db.get_sync_status().get("sync_seq", 0)
+    keywords = db.get_keywords()
+    active_kws = [k["keyword"].lower() for k in keywords if k["active"]]
     max_temp = max((d["temperature"] or 0) for d in raw) or 1
     result = []
     for d in raw:
@@ -150,6 +160,7 @@ def api_deals():
                 if d["published_at"] else "?"
             ),
             "is_new_this_sync": int(d.get("sync_seq") or 0) == current_seq and current_seq > 0,
+            "keyword_match": next((kw for kw in active_kws if kw in (d.get("title") or "").lower()), None),
         })
     return jsonify(result)
 
@@ -167,6 +178,32 @@ def api_sync_status():
     return jsonify(status)
 
 
+
+
+@app.route("/api/keywords", methods=["GET"])
+def api_keywords_get():
+    return jsonify(db.get_keywords())
+
+
+@app.route("/api/keywords", methods=["POST"])
+def api_keywords_add():
+    keyword = (request.json or {}).get("keyword", "").strip()
+    if not keyword:
+        return jsonify({"error": "empty"}), 400
+    db.add_keyword(keyword)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/keywords/<int:keyword_id>", methods=["DELETE"])
+def api_keywords_delete(keyword_id):
+    db.delete_keyword(keyword_id)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/keywords/<int:keyword_id>/toggle", methods=["POST"])
+def api_keywords_toggle(keyword_id):
+    db.toggle_keyword(keyword_id)
+    return jsonify({"ok": True})
 
 
 @app.route("/api/sync/log")

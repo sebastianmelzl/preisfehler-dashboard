@@ -469,6 +469,74 @@
     .log-zero { color: var(--text-faint); }
     .log-error { color: #f87171; }
 
+    #settings-panel { max-width: 1100px; margin: 0 auto 24px; }
+    .settings-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .settings-hint { font-size: 0.78rem; color: var(--text-faint); margin: 0; }
+    .kw-add-row { display: flex; gap: 8px; }
+    .kw-add-row input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.82rem;
+      color: var(--text);
+      outline: none;
+    }
+    .kw-add-row input:focus { border-color: var(--spinner-head); }
+    .kw-add-row button {
+      background: var(--spinner-head);
+      color: #0f172a;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .kw-add-row button:hover { opacity: 0.85; }
+    #kw-list { display: flex; flex-direction: column; gap: 6px; }
+    .kw-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .kw-item .kw-text { flex: 1; font-size: 0.84rem; font-weight: 500; }
+    .kw-item .kw-text.inactive { opacity: 0.4; text-decoration: line-through; }
+    .kw-toggle {
+      font-size: 0.72rem;
+      padding: 3px 9px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-input-hover);
+      color: var(--text-muted);
+    }
+    .kw-toggle.on { background: #14532d; border-color: #22c55e; color: #86efac; }
+    body.light .kw-toggle.on { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+    .kw-del { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 0.85rem; padding: 2px 6px; border-radius: 4px; }
+    .kw-del:hover { background: #7c2d1233; color: #fca5a5; }
+
+    .keyword-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: #3b1f6a;
+      color: #c4b5fd;
+      white-space: nowrap;
+    }
+    body.light .keyword-badge { background: #ede9fe; color: #6d28d9; }
+    .card.keyword-match {
+      border-color: #7c3aed !important;
+      box-shadow: 0 0 0 1px #7c3aed33, 0 4px 16px #7c3aed18;
+    }
+
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
@@ -493,6 +561,7 @@
     <div class="btn-group btn-group-icon">
       <button id="btn-sync" title="Jetzt syncen">🔄</button>
       <button id="btn-log" title="Sync-Log anzeigen">📋</button>
+      <button id="btn-settings" title="Einstellungen">⚙️</button>
       <button id="btn-theme" title="Theme wechseln">☀️</button>
       <button id="btn-test-tg" title="Telegram testen">📨</button>
     </div>
@@ -506,6 +575,23 @@
       <button id="btn-log-close">✕</button>
     </div>
     <div id="log-table-wrap"></div>
+  </div>
+</div>
+
+<div id="settings-panel" style="display:none">
+  <div class="log-inner">
+    <div class="log-header">
+      <span>⚙️ Keyword-Benachrichtigungen</span>
+      <button id="btn-settings-close">✕</button>
+    </div>
+    <div class="settings-body">
+      <p class="settings-hint">Deals die eines dieser Wörter im Titel enthalten werden per Telegram benachrichtigt und farbig hervorgehoben.</p>
+      <div class="kw-add-row">
+        <input id="kw-input" type="text" placeholder="Keyword eingeben…" autocomplete="off">
+        <button id="btn-kw-add">Hinzufügen</button>
+      </div>
+      <div id="kw-list"></div>
+    </div>
   </div>
 </div>
 
@@ -598,8 +684,9 @@
         : null;
 
       return `
-        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
+        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
           <div class="preisfehler-label">🚨 Preisfehler</div>
+          ${d.keyword_match ? `<span class="keyword-badge">🔍 ${esc(d.keyword_match)}</span>` : ''}
           ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}">✕</button>` : ''}
           <div class="card-top">
             <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
@@ -725,6 +812,56 @@
   });
   document.getElementById('btn-log-close').addEventListener('click', () => {
     logPanel.style.display = 'none';
+  });
+
+  // Settings / Keywords
+  const settingsPanel = document.getElementById('settings-panel');
+  const kwList = document.getElementById('kw-list');
+  const kwInput = document.getElementById('kw-input');
+
+  async function loadKeywords() {
+    const res = await fetch('/api/keywords');
+    const kws = await res.json();
+    if (!kws.length) {
+      kwList.innerHTML = '<p style="font-size:0.78rem;color:var(--text-faint)">Noch keine Keywords konfiguriert.</p>';
+      return;
+    }
+    kwList.innerHTML = kws.map(k => `
+      <div class="kw-item" data-id="${k.id}">
+        <span class="kw-text${k.active ? '' : ' inactive'}">${esc(k.keyword)}</span>
+        <button class="kw-toggle${k.active ? ' on' : ''}" data-id="${k.id}">${k.active ? 'Aktiv' : 'Inaktiv'}</button>
+        <button class="kw-del" data-id="${k.id}" title="Löschen">✕</button>
+      </div>`).join('');
+  }
+
+  document.getElementById('btn-settings').addEventListener('click', async () => {
+    const open = settingsPanel.style.display !== 'none';
+    settingsPanel.style.display = open ? 'none' : 'block';
+    if (!open) await loadKeywords();
+  });
+  document.getElementById('btn-settings-close').addEventListener('click', () => {
+    settingsPanel.style.display = 'none';
+  });
+
+  document.getElementById('btn-kw-add').addEventListener('click', async () => {
+    const kw = kwInput.value.trim();
+    if (!kw) return;
+    await fetch('/api/keywords', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({keyword: kw}) });
+    kwInput.value = '';
+    await loadKeywords();
+  });
+  kwInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-kw-add').click(); });
+
+  kwList.addEventListener('click', async e => {
+    const id = e.target.dataset.id;
+    if (!id) return;
+    if (e.target.classList.contains('kw-del')) {
+      await fetch(`/api/keywords/${id}`, { method: 'DELETE' });
+      await loadKeywords();
+    } else if (e.target.classList.contains('kw-toggle')) {
+      await fetch(`/api/keywords/${id}/toggle`, { method: 'POST' });
+      await loadKeywords();
+    }
   });
 
   // New deals toggle

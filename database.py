@@ -47,6 +47,13 @@ def init_db():
 
             INSERT OR IGNORE INTO sync_status (id) VALUES (1);
 
+            CREATE TABLE IF NOT EXISTS keywords (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                keyword    TEXT NOT NULL,
+                active     INTEGER DEFAULT 1,
+                created_at TEXT
+            );
+
             CREATE TABLE IF NOT EXISTS sync_log (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
                 synced_at        TEXT,
@@ -79,6 +86,10 @@ def init_db():
             pass
         try:
             conn.execute("ALTER TABLE deals ADD COLUMN shop_url TEXT DEFAULT ''")
+        except Exception:
+            pass
+        try:
+            conn.execute("ALTER TABLE deals ADD COLUMN keyword_notified INTEGER DEFAULT 0")
         except Exception:
             pass
         try:
@@ -267,5 +278,65 @@ def get_sync_log():
             "SELECT * FROM sync_log ORDER BY id DESC LIMIT 100"
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# Keywords
+# ---------------------------------------------------------------------------
+
+def get_keywords():
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM keywords ORDER BY id ASC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def add_keyword(keyword):
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO keywords (keyword, active, created_at) VALUES (?, 1, ?)",
+            (keyword.strip(), datetime.utcnow().isoformat()),
+        )
+
+
+def delete_keyword(keyword_id):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM keywords WHERE id=?", (keyword_id,))
+
+
+def toggle_keyword(keyword_id):
+    with get_conn() as conn:
+        conn.execute("UPDATE keywords SET active = 1 - active WHERE id=?", (keyword_id,))
+
+
+def get_unnotified_keyword_deals(keywords):
+    """Return deals not yet keyword-notified that match any active keyword."""
+    active = [k["keyword"].lower() for k in keywords if k["active"]]
+    if not active:
+        return []
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM deals WHERE keyword_notified=0 AND is_expired=0"
+        ).fetchall()
+    matches = []
+    for r in rows:
+        d = dict(r)
+        title_lower = (d.get("title") or "").lower()
+        for kw in active:
+            if kw in title_lower:
+                d["matched_keyword"] = kw
+                matches.append(d)
+                break
+    return matches
+
+
+def mark_keyword_notified(thread_ids):
+    if not thread_ids:
+        return
+    placeholders = ",".join("?" * len(thread_ids))
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE deals SET keyword_notified=1 WHERE thread_id IN ({placeholders})",
+            thread_ids,
+        )
 
 

@@ -92,6 +92,35 @@ def notify_high_discount_deals(deals):
         _send(text)
 
 
+def notify_keyword_matches(deals):
+    """Send Telegram for deals matching a user-configured keyword."""
+    for d in deals:
+        kw = d.get("matched_keyword", "?")
+        price = d.get("price")
+        next_best = d.get("next_best")
+        pct = d.get("discount_pct")
+        title = d.get("title", "")
+        merchant = d.get("merchant", "?")
+        url = d.get("url", "")
+        shop_url = d.get("shop_url") or url
+
+        price_str = f"{price:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".") if price else "?"
+        orig_str = (
+            f" <s>{next_best:,.2f} €</s>".replace(",", "X").replace(".", ",").replace("X", ".")
+            if next_best and next_best > 0 else ""
+        )
+        pct_str = f" → <b>-{pct}%</b>" if pct else ""
+
+        text = (
+            f"🔍 <b>Keyword-Treffer: „{kw}"</b>\n\n"
+            f"📦 {title}\n\n"
+            f"💰 <b>{price_str}</b>{orig_str}{pct_str}\n"
+            f"🏪 {merchant}\n\n"
+            f"🔗 <a href='{shop_url}'>Zum Shop</a>  |  <a href='{url}'>mydealz</a>"
+        )
+        _send(text)
+
+
 def notify_scraper_warning(consecutive):
     text = (
         f"⚠️ <b>Scraper-Warnung</b>\n\n"
