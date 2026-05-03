@@ -1,114 +1,120 @@
 import os
-import sqlite3
 import logging
 import time
+from contextlib import contextmanager
 from datetime import datetime
 
+import psycopg2
+import psycopg2.extras
+
 logger = logging.getLogger(__name__)
-DB_PATH = os.environ.get("DB_PATH", "deals.db")
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 
+class _ConnWrapper:
+    """Shim so call sites can use conn.execute() like sqlite3."""
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, sql, params=None):
+        cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, params or ())
+        return cur
+
+
+@contextmanager
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    conn = psycopg2.connect(DATABASE_URL)
+    try:
+        yield _ConnWrapper(conn)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def init_db():
     with get_conn() as conn:
-        conn.executescript("""
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS deals (
-                thread_id    TEXT PRIMARY KEY,
-                title        TEXT,
-                title_slug   TEXT,
-                price        REAL,
-                next_best    REAL,
-                discount_pct INTEGER,
-                merchant     TEXT,
-                category     TEXT,
-                temperature  REAL,
-                is_expired   INTEGER DEFAULT 0,
-                is_hot       INTEGER DEFAULT 0,
-                published_at INTEGER,
-                discovered_at TEXT,
-                notified     INTEGER DEFAULT 0,
-                url          TEXT
-            );
-
+                thread_id        TEXT PRIMARY KEY,
+                title            TEXT,
+                title_slug       TEXT,
+                price            REAL,
+                next_best        REAL,
+                discount_pct     INTEGER,
+                merchant         TEXT,
+                category         TEXT,
+                temperature      REAL,
+                is_expired       INTEGER DEFAULT 0,
+                is_hot           INTEGER DEFAULT 0,
+                published_at     INTEGER,
+                discovered_at    TEXT,
+                notified         INTEGER DEFAULT 0,
+                url              TEXT,
+                source           TEXT DEFAULT 'preisfehler',
+                manually_expired INTEGER DEFAULT 0,
+                link_host        TEXT DEFAULT '',
+                shop_url         TEXT DEFAULT '',
+                keyword_notified INTEGER DEFAULT 0,
+                sync_seq         INTEGER DEFAULT 0
+            )
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS sync_status (
-                id                   INTEGER PRIMARY KEY DEFAULT 1,
-                is_running           INTEGER DEFAULT 0,
-                last_sync            TEXT,
-                deals_found          INTEGER DEFAULT 0,
-                deals_new            INTEGER DEFAULT 0,
-                message              TEXT DEFAULT '',
-                sync_interval_minutes INTEGER DEFAULT NULL
-            );
-
-            INSERT OR IGNORE INTO sync_status (id) VALUES (1);
-
+                id                    INTEGER PRIMARY KEY DEFAULT 1,
+                is_running            INTEGER DEFAULT 0,
+                last_sync             TEXT,
+                deals_found           INTEGER DEFAULT 0,
+                deals_new             INTEGER DEFAULT 0,
+                message               TEXT DEFAULT '',
+                sync_interval_minutes INTEGER DEFAULT NULL,
+                sync_interval_max     INTEGER DEFAULT NULL,
+                consecutive_empty     INTEGER DEFAULT 0,
+                sync_seq              INTEGER DEFAULT 0
+            )
+        """)
+        conn.execute("INSERT INTO sync_status (id) VALUES (1) ON CONFLICT DO NOTHING")
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS keywords (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                id         SERIAL PRIMARY KEY,
                 keyword    TEXT NOT NULL,
                 active     INTEGER DEFAULT 1,
                 created_at TEXT
-            );
-
-            CREATE TABLE IF NOT EXISTS sync_log (
-                id               INTEGER PRIMARY KEY AUTOINCREMENT,
-                synced_at        TEXT,
-                preisfehler_found INTEGER DEFAULT 0,
-                preisfehler_new  INTEGER DEFAULT 0,
-                new_deals_found  INTEGER DEFAULT 0,
-                new_deals_new    INTEGER DEFAULT 0,
-                message          TEXT DEFAULT ''
-            );
+            )
         """)
-        try:
-            conn.execute("ALTER TABLE sync_status ADD COLUMN sync_interval_minutes INTEGER DEFAULT NULL")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE sync_status ADD COLUMN sync_interval_max INTEGER DEFAULT NULL")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE deals ADD COLUMN source TEXT DEFAULT 'preisfehler'")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE deals ADD COLUMN manually_expired INTEGER DEFAULT 0")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE deals ADD COLUMN link_host TEXT DEFAULT ''")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE deals ADD COLUMN shop_url TEXT DEFAULT ''")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE deals ADD COLUMN keyword_notified INTEGER DEFAULT 0")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE sync_status ADD COLUMN consecutive_empty INTEGER DEFAULT 0")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE sync_status ADD COLUMN sync_seq INTEGER DEFAULT 0")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE deals ADD COLUMN sync_seq INTEGER DEFAULT 0")
-        except Exception:
-            pass
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sync_log (
+                id                SERIAL PRIMARY KEY,
+                synced_at         TEXT,
+                preisfehler_found INTEGER DEFAULT 0,
+                preisfehler_new   INTEGER DEFAULT 0,
+                new_deals_found   INTEGER DEFAULT 0,
+                new_deals_new     INTEGER DEFAULT 0,
+                message           TEXT DEFAULT ''
+            )
+        """)
+        # Upgrade columns for existing databases
+        for col_sql in [
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'preisfehler'",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS manually_expired INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS link_host TEXT DEFAULT ''",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS shop_url TEXT DEFAULT ''",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS keyword_notified INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS sync_seq INTEGER DEFAULT 0",
+            "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_minutes INTEGER DEFAULT NULL",
+            "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_max INTEGER DEFAULT NULL",
+            "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS consecutive_empty INTEGER DEFAULT 0",
+            "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_seq INTEGER DEFAULT 0",
+        ]:
+            conn.execute(col_sql)
     logger.info("Database initialised")
 
 
 def next_sync_seq():
-    """Increment and return the new sync sequence number."""
     with get_conn() as conn:
         conn.execute("UPDATE sync_status SET sync_seq = sync_seq + 1 WHERE id=1")
         row = conn.execute("SELECT sync_seq FROM sync_status WHERE id=1").fetchone()
@@ -121,7 +127,8 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
     with get_conn() as conn:
         for d in deals_data:
             existing = conn.execute(
-                "SELECT thread_id, source, manually_expired FROM deals WHERE thread_id = ?", (d["thread_id"],)
+                "SELECT thread_id, source, manually_expired FROM deals WHERE thread_id = %s",
+                (d["thread_id"],),
             ).fetchone()
             if existing is None:
                 conn.execute(
@@ -129,7 +136,7 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                        (thread_id, title, title_slug, price, next_best, discount_pct,
                         merchant, category, temperature, is_expired, is_hot,
                         published_at, discovered_at, notified, url, source, link_host, shop_url, sync_seq)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)""",
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s)""",
                     (
                         d["thread_id"], d["title"], d["title_slug"],
                         d["price"], d["next_best"], d["discount_pct"],
@@ -147,23 +154,21 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                 # Don't overwrite manually expired deals
                 if existing["manually_expired"]:
                     conn.execute(
-                        "UPDATE deals SET temperature=?, is_hot=? WHERE thread_id=?",
+                        "UPDATE deals SET temperature=%s, is_hot=%s WHERE thread_id=%s",
                         (d["temperature"], d["is_hot"], d["thread_id"]),
                     )
                 else:
                     conn.execute(
-                        """UPDATE deals SET temperature=?, is_expired=?, is_hot=?
-                           WHERE thread_id=?""",
+                        "UPDATE deals SET temperature=%s, is_expired=%s, is_hot=%s WHERE thread_id=%s",
                         (d["temperature"], d["is_expired"], d["is_hot"], d["thread_id"]),
                     )
     return new_ids
 
 
-
 def mark_expired(thread_id):
     with get_conn() as conn:
         conn.execute(
-            "UPDATE deals SET is_expired=1, manually_expired=1 WHERE thread_id=?", (thread_id,)
+            "UPDATE deals SET is_expired=1, manually_expired=1 WHERE thread_id=%s", (thread_id,)
         )
 
 
@@ -178,11 +183,10 @@ def get_unnotified_deals():
 def mark_notified(thread_ids):
     if not thread_ids:
         return
-    placeholders = ",".join("?" * len(thread_ids))
     with get_conn() as conn:
         conn.execute(
-            f"UPDATE deals SET notified=1 WHERE thread_id IN ({placeholders})",
-            thread_ids,
+            "UPDATE deals SET notified=1 WHERE thread_id = ANY(%s)",
+            (list(thread_ids),),
         )
 
 
@@ -193,7 +197,7 @@ def get_all_deals(include_new=False):
             rows = conn.execute(
                 """SELECT * FROM deals
                    WHERE source = 'preisfehler'
-                      OR (source = 'new' AND published_at >= ?)
+                      OR (source = 'new' AND published_at >= %s)
                    ORDER BY published_at DESC""",
                 (cutoff,),
             ).fetchall()
@@ -205,13 +209,11 @@ def get_all_deals(include_new=False):
 
 
 def cleanup_new_deals():
-    """Remove non-preisfehler deals posted more than 1 hour ago.
-    Display still filters to 10-min window via published_at in get_all_deals,
-    but keeping records for 1h prevents re-insertion within the same lifecycle."""
+    """Remove non-preisfehler deals posted more than 1 hour ago."""
     cutoff = int(time.time()) - 3600
     with get_conn() as conn:
         conn.execute(
-            "DELETE FROM deals WHERE source = 'new' AND published_at < ?", (cutoff,)
+            "DELETE FROM deals WHERE source = 'new' AND published_at < %s", (cutoff,)
         )
 
 
@@ -219,15 +221,9 @@ def set_sync_status(is_running, deals_found=0, deals_new=0, message=""):
     with get_conn() as conn:
         conn.execute(
             """UPDATE sync_status SET
-               is_running=?, last_sync=?, deals_found=?, deals_new=?, message=?
+               is_running=%s, last_sync=%s, deals_found=%s, deals_new=%s, message=%s
                WHERE id=1""",
-            (
-                is_running,
-                datetime.utcnow().isoformat(),
-                deals_found,
-                deals_new,
-                message,
-            ),
+            (is_running, datetime.utcnow().isoformat(), deals_found, deals_new, message),
         )
 
 
@@ -254,7 +250,7 @@ def count_visible_new_this_sync(sync_seq):
     cutoff = int(time.time()) - 600
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT COUNT(*) as cnt FROM deals WHERE source='new' AND sync_seq=? AND published_at>=?",
+            "SELECT COUNT(*) as cnt FROM deals WHERE source='new' AND sync_seq=%s AND published_at>=%s",
             (sync_seq, cutoff),
         ).fetchone()
     return row["cnt"] if row else 0
@@ -265,11 +261,13 @@ def add_sync_log(preisfehler_found, preisfehler_new, new_deals_found, new_deals_
         conn.execute(
             """INSERT INTO sync_log
                (synced_at, preisfehler_found, preisfehler_new, new_deals_found, new_deals_new, message)
-               VALUES (?,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s)""",
             (datetime.utcnow().isoformat(), preisfehler_found, preisfehler_new,
              new_deals_found, new_deals_new, message),
         )
-        conn.execute("DELETE FROM sync_log WHERE id NOT IN (SELECT id FROM sync_log ORDER BY id DESC LIMIT 100)")
+        conn.execute(
+            "DELETE FROM sync_log WHERE id NOT IN (SELECT id FROM sync_log ORDER BY id DESC LIMIT 100)"
+        )
 
 
 def get_sync_log():
@@ -293,19 +291,19 @@ def get_keywords():
 def add_keyword(keyword):
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO keywords (keyword, active, created_at) VALUES (?, 1, ?)",
+            "INSERT INTO keywords (keyword, active, created_at) VALUES (%s, 1, %s)",
             (keyword.strip(), datetime.utcnow().isoformat()),
         )
 
 
 def delete_keyword(keyword_id):
     with get_conn() as conn:
-        conn.execute("DELETE FROM keywords WHERE id=?", (keyword_id,))
+        conn.execute("DELETE FROM keywords WHERE id=%s", (keyword_id,))
 
 
 def toggle_keyword(keyword_id):
     with get_conn() as conn:
-        conn.execute("UPDATE keywords SET active = 1 - active WHERE id=?", (keyword_id,))
+        conn.execute("UPDATE keywords SET active = 1 - active WHERE id=%s", (keyword_id,))
 
 
 def get_unnotified_keyword_deals(keywords):
@@ -332,11 +330,8 @@ def get_unnotified_keyword_deals(keywords):
 def mark_keyword_notified(thread_ids):
     if not thread_ids:
         return
-    placeholders = ",".join("?" * len(thread_ids))
     with get_conn() as conn:
         conn.execute(
-            f"UPDATE deals SET keyword_notified=1 WHERE thread_id IN ({placeholders})",
-            thread_ids,
+            "UPDATE deals SET keyword_notified=1 WHERE thread_id = ANY(%s)",
+            (list(thread_ids),),
         )
-
-
