@@ -237,6 +237,17 @@ def api_sync_log():
     return jsonify(db.get_sync_log())
 
 
+@app.route("/api/debug/hot-fetch")
+def api_debug_hot_fetch():
+    try:
+        deals, total = scraper.fetch_deals_hot(limit=5)
+        return jsonify({"ok": True, "total": total, "count": len(deals),
+                        "sample": [{"id": d.get("threadId"), "title": d.get("title"),
+                                    "temp": d.get("temperature")} for d in deals]})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @app.route("/api/deals/<thread_id>/expire", methods=["POST"])
 def api_expire_deal(thread_id):
     db.mark_expired(thread_id)
