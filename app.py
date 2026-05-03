@@ -54,8 +54,14 @@ def run_sync():
         db.set_sync_status(True, message="Lädt Deals…")
         current_seq = db.next_sync_seq()
 
-        # Preisfehler
+        # Preisfehler — new + hot fetch to keep temperature current for older deals
         deals_raw, total = scraper.fetch_deals(limit=50)
+        try:
+            hot_raw, _ = scraper.fetch_deals_hot(limit=50)
+            seen = {t["threadId"] for t in deals_raw}
+            deals_raw += [t for t in hot_raw if t["threadId"] not in seen]
+        except Exception as e:
+            logger.warning("Hot deals fetch failed: %s", e)
         normalised = [_normalise(t) for t in deals_raw]
         new_ids, _ = db.upsert_deals(normalised, source="preisfehler", sync_seq=current_seq)
 

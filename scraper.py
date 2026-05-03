@@ -127,6 +127,16 @@ def fetch_deals(limit=10, retries=2):
     )
 
 
+def fetch_deals_hot(limit=50, retries=2):
+    """Fetch preisfehler deals sorted by temperature to catch trending older deals."""
+    return _fetch(
+        variables={"input": {"q": "Preisfehler", "sortBy": "temp", "type": "Deal", "page": 1}},
+        referer="https://www.mydealz.de/search?q=Preisfehler&sortby=temp",
+        limit=limit,
+        retries=retries,
+    )
+
+
 def fetch_new_deals(limit=50, retries=2):
     sess = _get_session()
     for attempt in range(retries + 1):
