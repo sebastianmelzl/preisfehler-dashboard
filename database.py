@@ -1,5 +1,6 @@
 import os
 import logging
+import statistics
 import time
 from contextlib import contextmanager
 from datetime import datetime
@@ -61,7 +62,8 @@ def init_db():
                 shop_url         TEXT DEFAULT '',
                 keyword_notified     INTEGER DEFAULT 0,
                 sync_seq             INTEGER DEFAULT 0,
-                temp_spike_notified  INTEGER DEFAULT 0
+                temp_spike_notified  INTEGER DEFAULT 0,
+                temp_updated_at      INTEGER DEFAULT 0
             )
         """)
         conn.execute("""
@@ -107,6 +109,7 @@ def init_db():
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS keyword_notified INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS sync_seq INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS temp_spike_notified INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS temp_updated_at INTEGER DEFAULT 0",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_minutes INTEGER DEFAULT NULL",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_max INTEGER DEFAULT NULL",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS consecutive_empty INTEGER DEFAULT 0",
@@ -123,20 +126,57 @@ def next_sync_seq():
     return row["sync_seq"] if row else 1
 
 
-_SPIKE_DELTA = 50    # min °C increase in one sync to qualify as spike
-_SPIKE_MIN_TEMP = 50 # min new temperature to qualify as spike
+def _detect_spikes(candidates):
+    """Identify disproportionate temperature risers relative to the current batch.
+
+    For each candidate we compute °/min since the last recorded update.
+    A deal is a spike if its rate is >= SPIKE_FACTOR × median of all positive
+    rates in this batch AND above an absolute floor, so a single slow-moving
+    batch doesn't trigger false positives.
+
+    candidates: list of dicts with keys old_temp, new_temp, dt_seconds + full deal fields.
+    Returns the subset that are spiking.
+    """
+    MIN_DT = 20        # seconds – ignore comparisons that are too fresh
+    MIN_RATE = 5.0     # °/min absolute floor to even be considered
+    SPIKE_FACTOR = 3.0 # must be N× the median positive rate of the whole batch
+
+    rated = []
+    for c in candidates:
+        if c["dt_seconds"] < MIN_DT:
+            continue
+        rate = (c["new_temp"] - c["old_temp"]) / (c["dt_seconds"] / 60.0)
+        if rate > 0:
+            rated.append({**c, "rate": rate})
+
+    if not rated:
+        return []
+
+    all_rates = [r["rate"] for r in rated]
+
+    if len(all_rates) == 1:
+        # Only one heating deal — flag only if rate is notable on its own
+        return [r for r in rated if r["rate"] >= MIN_RATE * 4]
+
+    median_rate = statistics.median(all_rates)
+    threshold = max(MIN_RATE, SPIKE_FACTOR * median_rate)
+    return [r for r in rated if r["rate"] >= threshold]
 
 
 def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
     """Insert new deals, update existing ones.
-    Returns (new_ids, spike_deals) where spike_deals are 'new' source deals
-    whose temperature rose by _SPIKE_DELTA or more in this sync."""
+    Returns (new_ids, spike_deals) where spike_deals are dynamically detected
+    temperature spikes among source='new' deals."""
     new_ids = []
-    spike_deals = []
+    candidates = []   # new-source deals eligible for spike detection
+    now = int(time.time())
+
     with get_conn() as conn:
         for d in deals_data:
             existing = conn.execute(
-                "SELECT thread_id, source, manually_expired, temperature, temp_spike_notified FROM deals WHERE thread_id = %s",
+                """SELECT thread_id, source, manually_expired, temperature,
+                          temp_spike_notified, temp_updated_at
+                   FROM deals WHERE thread_id = %s""",
                 (d["thread_id"],),
             ).fetchone()
             if existing is None:
@@ -144,15 +184,16 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                     """INSERT INTO deals
                        (thread_id, title, title_slug, price, next_best, discount_pct,
                         merchant, category, temperature, is_expired, is_hot,
-                        published_at, discovered_at, notified, url, source, link_host, shop_url, sync_seq)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s)""",
+                        published_at, discovered_at, notified, url, source,
+                        link_host, shop_url, sync_seq, temp_updated_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s,%s)""",
                     (
                         d["thread_id"], d["title"], d["title_slug"],
                         d["price"], d["next_best"], d["discount_pct"],
                         d["merchant"], d["category"], d["temperature"],
                         d["is_expired"], d["is_hot"], d["published_at"],
                         datetime.utcnow().isoformat(), d["url"], source,
-                        d.get("link_host", ""), d.get("shop_url", ""), sync_seq,
+                        d.get("link_host", ""), d.get("shop_url", ""), sync_seq, now,
                     ),
                 )
                 new_ids.append(d["thread_id"])
@@ -163,25 +204,35 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
 
                 new_temp = d["temperature"] or 0
                 old_temp = existing["temperature"] or 0
+                last_updated = existing["temp_updated_at"] or 0
+                dt_seconds = (now - last_updated) if last_updated > 0 else 0
 
-                # Detect temperature spike for new-source deals
+                # Collect spike candidates for source='new' deals
                 if (source == "new"
                         and not existing["temp_spike_notified"]
-                        and new_temp >= _SPIKE_MIN_TEMP
-                        and (new_temp - old_temp) >= _SPIKE_DELTA):
-                    spike_deals.append({**d, "old_temp": old_temp})
+                        and new_temp > old_temp
+                        and dt_seconds > 0):
+                    candidates.append({
+                        **d,
+                        "old_temp": old_temp,
+                        "new_temp": new_temp,
+                        "dt_seconds": dt_seconds,
+                    })
 
                 # Don't overwrite manually expired deals
                 if existing["manually_expired"]:
                     conn.execute(
-                        "UPDATE deals SET temperature=%s, is_hot=%s WHERE thread_id=%s",
-                        (d["temperature"], d["is_hot"], d["thread_id"]),
+                        "UPDATE deals SET temperature=%s, is_hot=%s, temp_updated_at=%s WHERE thread_id=%s",
+                        (d["temperature"], d["is_hot"], now, d["thread_id"]),
                     )
                 else:
                     conn.execute(
-                        "UPDATE deals SET temperature=%s, is_expired=%s, is_hot=%s WHERE thread_id=%s",
-                        (d["temperature"], d["is_expired"], d["is_hot"], d["thread_id"]),
+                        """UPDATE deals SET temperature=%s, is_expired=%s, is_hot=%s,
+                           temp_updated_at=%s WHERE thread_id=%s""",
+                        (d["temperature"], d["is_expired"], d["is_hot"], now, d["thread_id"]),
                     )
+
+    spike_deals = _detect_spikes(candidates)
     return new_ids, spike_deals
 
 
