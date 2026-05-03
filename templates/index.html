@@ -535,6 +535,27 @@
       border-color: #7c3aed !important;
       box-shadow: 0 0 0 1px #7c3aed33, 0 4px 16px #7c3aed18;
     }
+    .card.temp-spiking {
+      background: #2a1a06 !important;
+      border-color: #f97316 !important;
+      box-shadow: 0 0 0 1px #f9731633, 0 4px 20px #f9731628;
+    }
+    body.light .card.temp-spiking {
+      background: #fff7ed !important;
+      border-color: #f97316 !important;
+      box-shadow: 0 0 0 1px #f9731644, 0 4px 16px #f9731622;
+    }
+    .spike-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: #f9731622;
+      color: #fb923c;
+      border: 1px solid #f9731644;
+      border-radius: 5px;
+      padding: 1px 6px;
+      margin-bottom: 4px;
+    }
 
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -679,12 +700,13 @@
 
       const barWidth = d.hot_bar_width || 0;
       const expiresAt = isNew && d.published_at
-        ? d.published_at * 1000 + 600000
+        ? d.published_at * 1000 + 2400000
         : null;
 
       return `
-        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
+        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
           <div class="preisfehler-label">🚨 Preisfehler</div>
+          ${d.is_spiking ? `<span class="spike-badge">🌡 heizt auf</span>` : ''}
           ${d.keyword_match ? `<span class="keyword-badge">🔍 ${esc(d.keyword_match)}</span>` : ''}
           ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}">✕</button>` : ''}
           <div class="card-top">

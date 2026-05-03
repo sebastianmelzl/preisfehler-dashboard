@@ -1,5 +1,6 @@
 import logging
 import os
+import statistics
 import threading
 from datetime import datetime
 
@@ -149,9 +150,25 @@ def api_deals():
     keywords = db.get_keywords()
     active_kws = [k["keyword"].lower() for k in keywords if k["active"]]
     max_temp = max((d["temperature"] or 0) for d in raw) or 1
+
+    # Compute spike threshold from median rate of all visible new-source deals
+    new_rates = [d["temp_rate"] for d in raw
+                 if d.get("source") == "new" and (d.get("temp_rate") or 0) > 0]
+    if len(new_rates) >= 2:
+        median_rate = statistics.median(new_rates)
+        spike_threshold = max(5.0, 3.0 * median_rate)
+    else:
+        spike_threshold = None  # not enough data for relative comparison
+
     result = []
     for d in raw:
         temp = d["temperature"] or 0
+        rate = d.get("temp_rate") or 0
+        is_spiking = (
+            spike_threshold is not None
+            and d.get("source") == "new"
+            and rate >= spike_threshold
+        )
         result.append({
             **d,
             "hot_bar_width": scraper.hot_bar_width(temp, max_temp),
@@ -163,6 +180,7 @@ def api_deals():
             ),
             "is_new_this_sync": int(d.get("sync_seq") or 0) == current_seq and current_seq > 0,
             "keyword_match": next((kw for kw in active_kws if kw in (d.get("title") or "").lower()), None),
+            "is_spiking": is_spiking,
         })
     return jsonify(result)
 

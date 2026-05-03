@@ -63,7 +63,8 @@ def init_db():
                 keyword_notified     INTEGER DEFAULT 0,
                 sync_seq             INTEGER DEFAULT 0,
                 temp_spike_notified  INTEGER DEFAULT 0,
-                temp_updated_at      INTEGER DEFAULT 0
+                temp_updated_at      INTEGER DEFAULT 0,
+                temp_rate            REAL    DEFAULT 0
             )
         """)
         conn.execute("""
@@ -110,6 +111,7 @@ def init_db():
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS sync_seq INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS temp_spike_notified INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS temp_updated_at INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS temp_rate REAL DEFAULT 0",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_minutes INTEGER DEFAULT NULL",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_max INTEGER DEFAULT NULL",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS consecutive_empty INTEGER DEFAULT 0",
@@ -207,7 +209,12 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                 last_updated = existing["temp_updated_at"] or 0
                 dt_seconds = (now - last_updated) if last_updated > 0 else 0
 
-                # Collect spike candidates for source='new' deals
+                # Rate in °/min — stored for every source='new' deal so the
+                # dashboard can do live spike detection via the median.
+                rate = ((new_temp - old_temp) / (dt_seconds / 60.0)
+                        if source == "new" and dt_seconds > 0 else 0.0)
+
+                # Collect spike candidates for Telegram notifications
                 if (source == "new"
                         and not existing["temp_spike_notified"]
                         and new_temp > old_temp
@@ -222,14 +229,15 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                 # Don't overwrite manually expired deals
                 if existing["manually_expired"]:
                     conn.execute(
-                        "UPDATE deals SET temperature=%s, is_hot=%s, temp_updated_at=%s WHERE thread_id=%s",
-                        (d["temperature"], d["is_hot"], now, d["thread_id"]),
+                        """UPDATE deals SET temperature=%s, is_hot=%s,
+                           temp_updated_at=%s, temp_rate=%s WHERE thread_id=%s""",
+                        (d["temperature"], d["is_hot"], now, rate, d["thread_id"]),
                     )
                 else:
                     conn.execute(
                         """UPDATE deals SET temperature=%s, is_expired=%s, is_hot=%s,
-                           temp_updated_at=%s WHERE thread_id=%s""",
-                        (d["temperature"], d["is_expired"], d["is_hot"], now, d["thread_id"]),
+                           temp_updated_at=%s, temp_rate=%s WHERE thread_id=%s""",
+                        (d["temperature"], d["is_expired"], d["is_hot"], now, rate, d["thread_id"]),
                     )
 
     spike_deals = _detect_spikes(candidates)
