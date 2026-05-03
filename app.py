@@ -158,14 +158,20 @@ def api_deals():
     active_kws = [k["keyword"].lower() for k in keywords if k["active"]]
     max_temp = max((d["temperature"] or 0) for d in raw) or 1
 
-    # Compute spike threshold from median rate of all visible new-source deals
-    new_rates = [d["temp_rate"] for d in raw
-                 if d.get("source") == "new" and (d.get("temp_rate") or 0) > 0]
-    if len(new_rates) >= 2:
-        median_rate = statistics.median(new_rates)
-        spike_threshold = max(5.0, 3.0 * median_rate)
+    # Spike detection — same gates as _detect_spikes in database.py
+    _MIN_RATE = 20.0
+    _SPIKE_FACTOR = 4.0
+    eligible_rates = [d["temp_rate"] for d in raw
+                      if d.get("source") == "new"
+                      and (d.get("temp_rate") or 0) >= _MIN_RATE
+                      and (d.get("temperature") or 0) >= 30]
+    if len(eligible_rates) >= 3:
+        p75 = statistics.quantiles(eligible_rates, n=4)[2]
+        spike_threshold = max(_MIN_RATE, _SPIKE_FACTOR * p75)
+    elif eligible_rates:
+        spike_threshold = _MIN_RATE * 3
     else:
-        spike_threshold = None  # not enough data for relative comparison
+        spike_threshold = None
 
     result = []
     for d in raw:
@@ -174,6 +180,7 @@ def api_deals():
         is_spiking = (
             spike_threshold is not None
             and d.get("source") == "new"
+            and (d.get("temperature") or 0) >= 30
             and rate >= spike_threshold
         )
         result.append({

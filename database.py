@@ -129,26 +129,30 @@ def next_sync_seq():
 
 
 def _detect_spikes(candidates):
-    """Identify disproportionate temperature risers relative to the current batch.
+    """Identify deals heating up disproportionately fast relative to the current batch.
 
-    For each candidate we compute °/min since the last recorded update.
-    A deal is a spike if its rate is >= SPIKE_FACTOR × median of all positive
-    rates in this batch AND above an absolute floor, so a single slow-moving
-    batch doesn't trigger false positives.
+    Three gates must all pass:
+      1. Absolute: minimum gain of MIN_DELTA° and minimum rate of MIN_RATE °/min
+      2. Temperature: deal must already be at MIN_NEW_TEMP° (filters cold/noisy deals)
+      3. Relative: rate must be >= SPIKE_FACTOR × 75th-percentile of all eligible movers
+         so only the truly exceptional top fraction is flagged.
 
     candidates: list of dicts with keys old_temp, new_temp, dt_seconds + full deal fields.
     Returns the subset that are spiking.
     """
-    MIN_DT = 20        # seconds – ignore comparisons that are too fresh
-    MIN_RATE = 5.0     # °/min absolute floor to even be considered
-    SPIKE_FACTOR = 3.0 # must be N× the median positive rate of the whole batch
+    MIN_DT = 30        # seconds – minimum elapsed time for a meaningful rate
+    MIN_DELTA = 15     # °C minimum absolute gain to be eligible
+    MIN_NEW_TEMP = 30  # °C minimum current temperature to filter out cold deals
+    MIN_RATE = 20.0    # °/min absolute floor (~1200°/hour)
+    SPIKE_FACTOR = 4.0 # must be N× the 75th-percentile rate of all eligible movers
 
     rated = []
     for c in candidates:
-        if c["dt_seconds"] < MIN_DT:
+        delta = c["new_temp"] - c["old_temp"]
+        if c["dt_seconds"] < MIN_DT or delta < MIN_DELTA or c["new_temp"] < MIN_NEW_TEMP:
             continue
-        rate = (c["new_temp"] - c["old_temp"]) / (c["dt_seconds"] / 60.0)
-        if rate > 0:
+        rate = delta / (c["dt_seconds"] / 60.0)
+        if rate >= MIN_RATE:
             rated.append({**c, "rate": rate})
 
     if not rated:
@@ -156,12 +160,12 @@ def _detect_spikes(candidates):
 
     all_rates = [r["rate"] for r in rated]
 
-    if len(all_rates) == 1:
-        # Only one heating deal — flag only if rate is notable on its own
-        return [r for r in rated if r["rate"] >= MIN_RATE * 4]
+    if len(all_rates) < 3:
+        # Too few data points for a reliable percentile – require 3× the absolute floor
+        return [r for r in rated if r["rate"] >= MIN_RATE * 3]
 
-    median_rate = statistics.median(all_rates)
-    threshold = max(MIN_RATE, SPIKE_FACTOR * median_rate)
+    p75 = statistics.quantiles(all_rates, n=4)[2]
+    threshold = max(MIN_RATE, SPIKE_FACTOR * p75)
     return [r for r in rated if r["rate"] >= threshold]
 
 
