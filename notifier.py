@@ -112,7 +112,7 @@ def notify_keyword_matches(deals):
         pct_str = f" → <b>-{pct}%</b>" if pct else ""
 
         text = (
-            f"🔍 <b>Keyword-Treffer: „{kw}"</b>\n\n"
+            f"🔍 <b>Keyword-Treffer: \"{kw}\"</b>\n\n"
             f"📦 {title}\n\n"
             f"💰 <b>{price_str}</b>{orig_str}{pct_str}\n"
             f"🏪 {merchant}\n\n"
