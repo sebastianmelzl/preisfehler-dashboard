@@ -158,13 +158,33 @@ def api_deals():
     active_kws = [k["keyword"].lower() for k in keywords if k["active"]]
     max_temp = max((d["temperature"] or 0) for d in raw) or 1
 
-    # Spike detection — same gates as _detect_spikes in database.py
+    # Spike detection: combine per-sync rate with cumulative rate since discovery.
+    # A deal is a spike candidate if EITHER its recent velocity OR its overall
+    # trajectory since first seen is disproportionately high relative to peers.
     _MIN_RATE = 20.0
     _SPIKE_FACTOR = 4.0
-    eligible_rates = [d["temp_rate"] for d in raw
-                      if d.get("source") == "new"
-                      and (d.get("temp_rate") or 0) >= _MIN_RATE
-                      and (d.get("temperature") or 0) >= 30]
+
+    def _cumulative_rate(d):
+        """°/min since the deal was first discovered."""
+        disc = d.get("discovered_at")
+        if not disc or d.get("source") != "new":
+            return 0.0
+        try:
+            disc_dt = datetime.fromisoformat(disc)
+            minutes = max((datetime.utcnow() - disc_dt).total_seconds() / 60.0, 1.0)
+            return ((d.get("temperature") or 0) - (d.get("initial_temp") or 0)) / minutes
+        except Exception:
+            return 0.0
+
+    new_deals = [d for d in raw if d.get("source") == "new" and (d.get("temperature") or 0) >= 30]
+
+    # Collect both rate types for each eligible new deal
+    rate_pairs = [
+        (d["thread_id"], max(d.get("temp_rate") or 0, _cumulative_rate(d)))
+        for d in new_deals
+    ]
+    eligible_rates = [r for _, r in rate_pairs if r >= _MIN_RATE]
+
     if len(eligible_rates) >= 3:
         p75 = statistics.quantiles(eligible_rates, n=4)[2]
         spike_threshold = max(_MIN_RATE, _SPIKE_FACTOR * p75)
@@ -173,16 +193,14 @@ def api_deals():
     else:
         spike_threshold = None
 
+    spiking_ids = set()
+    if spike_threshold is not None:
+        spiking_ids = {tid for tid, r in rate_pairs if r >= spike_threshold}
+
     result = []
     for d in raw:
         temp = d["temperature"] or 0
-        rate = d.get("temp_rate") or 0
-        is_spiking = (
-            spike_threshold is not None
-            and d.get("source") == "new"
-            and (d.get("temperature") or 0) >= 30
-            and rate >= spike_threshold
-        )
+        is_spiking = d["thread_id"] in spiking_ids
         result.append({
             **d,
             "hot_bar_width": scraper.hot_bar_width(temp, max_temp),

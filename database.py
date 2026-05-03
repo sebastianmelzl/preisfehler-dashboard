@@ -64,7 +64,8 @@ def init_db():
                 sync_seq             INTEGER DEFAULT 0,
                 temp_spike_notified  INTEGER DEFAULT 0,
                 temp_updated_at      INTEGER DEFAULT 0,
-                temp_rate            REAL    DEFAULT 0
+                temp_rate            REAL    DEFAULT 0,
+                initial_temp         REAL    DEFAULT 0
             )
         """)
         conn.execute("""
@@ -112,6 +113,7 @@ def init_db():
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS temp_spike_notified INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS temp_updated_at INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS temp_rate REAL DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS initial_temp REAL DEFAULT 0",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_minutes INTEGER DEFAULT NULL",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_max INTEGER DEFAULT NULL",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS consecutive_empty INTEGER DEFAULT 0",
@@ -191,8 +193,8 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                        (thread_id, title, title_slug, price, next_best, discount_pct,
                         merchant, category, temperature, is_expired, is_hot,
                         published_at, discovered_at, notified, url, source,
-                        link_host, shop_url, sync_seq, temp_updated_at)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s,%s)""",
+                        link_host, shop_url, sync_seq, temp_updated_at, initial_temp)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s,%s,%s)""",
                     (
                         d["thread_id"], d["title"], d["title_slug"],
                         d["price"], d["next_best"], d["discount_pct"],
@@ -200,6 +202,7 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                         d["is_expired"], d["is_hot"], d["published_at"],
                         datetime.utcnow().isoformat(), d["url"], source,
                         d.get("link_host", ""), d.get("shop_url", ""), sync_seq, now,
+                        d["temperature"] or 0,
                     ),
                 )
                 new_ids.append(d["thread_id"])
