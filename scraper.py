@@ -118,20 +118,10 @@ def _fetch(variables, referer, limit, retries=2):
                 raise
 
 
-def fetch_deals(limit=10, retries=2):
+def fetch_deals(limit=50, page=1, retries=2):
     return _fetch(
-        variables={"input": {"q": "Preisfehler", "sortBy": "new", "type": "Deal", "page": 1}},
+        variables={"input": {"q": "Preisfehler", "sortBy": "new", "type": "Deal", "page": page}},
         referer="https://www.mydealz.de/search?q=Preisfehler&sortby=new",
-        limit=limit,
-        retries=retries,
-    )
-
-
-def fetch_deals_hot(limit=50, retries=2):
-    """Fetch preisfehler deals sorted by temperature to catch trending older deals."""
-    return _fetch(
-        variables={"input": {"q": "Preisfehler", "sortBy": "temp", "type": "Deal", "page": 1}},
-        referer="https://www.mydealz.de/search?q=Preisfehler&sortby=temp",
         limit=limit,
         retries=retries,
     )
