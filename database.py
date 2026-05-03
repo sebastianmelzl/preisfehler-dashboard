@@ -223,7 +223,7 @@ def set_sync_status(is_running, deals_found=0, deals_new=0, message=""):
             """UPDATE sync_status SET
                is_running=%s, last_sync=%s, deals_found=%s, deals_new=%s, message=%s
                WHERE id=1""",
-            (is_running, datetime.utcnow().isoformat(), deals_found, deals_new, message),
+            (int(is_running), datetime.utcnow().isoformat(), deals_found, deals_new, message),
         )
 
 
