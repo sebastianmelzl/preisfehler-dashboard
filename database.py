@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
-DB_PATH = "deals.db"
+DB_PATH = os.environ.get("DB_PATH", "deals.db")
 
 
 def get_conn():
@@ -105,6 +105,27 @@ def init_db():
         except Exception:
             pass
     logger.info("Database initialised")
+    _seed_keywords_from_env()
+
+
+def _seed_keywords_from_env():
+    """Restore keywords from KEYWORDS env var (comma-separated) on startup."""
+    env = os.environ.get("KEYWORDS", "").strip()
+    if not env:
+        return
+    env_keywords = {k.strip().lower() for k in env.split(",") if k.strip()}
+    with get_conn() as conn:
+        existing = {
+            row[0].lower()
+            for row in conn.execute("SELECT keyword FROM keywords").fetchall()
+        }
+        for kw in env_keywords:
+            if kw not in existing:
+                conn.execute(
+                    "INSERT INTO keywords (keyword, active, created_at) VALUES (?, 1, ?)",
+                    (kw, datetime.utcnow().isoformat()),
+                )
+                logger.info("Seeded keyword from env: %s", kw)
 
 
 def next_sync_seq():
