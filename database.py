@@ -59,8 +59,9 @@ def init_db():
                 manually_expired INTEGER DEFAULT 0,
                 link_host        TEXT DEFAULT '',
                 shop_url         TEXT DEFAULT '',
-                keyword_notified INTEGER DEFAULT 0,
-                sync_seq         INTEGER DEFAULT 0
+                keyword_notified     INTEGER DEFAULT 0,
+                sync_seq             INTEGER DEFAULT 0,
+                temp_spike_notified  INTEGER DEFAULT 0
             )
         """)
         conn.execute("""
@@ -105,6 +106,7 @@ def init_db():
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS shop_url TEXT DEFAULT ''",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS keyword_notified INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS sync_seq INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS temp_spike_notified INTEGER DEFAULT 0",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_minutes INTEGER DEFAULT NULL",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_max INTEGER DEFAULT NULL",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS consecutive_empty INTEGER DEFAULT 0",
@@ -121,13 +123,20 @@ def next_sync_seq():
     return row["sync_seq"] if row else 1
 
 
+_SPIKE_DELTA = 50    # min °C increase in one sync to qualify as spike
+_SPIKE_MIN_TEMP = 50 # min new temperature to qualify as spike
+
+
 def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
-    """Insert new deals, update existing ones. Returns list of new thread_ids."""
+    """Insert new deals, update existing ones.
+    Returns (new_ids, spike_deals) where spike_deals are 'new' source deals
+    whose temperature rose by _SPIKE_DELTA or more in this sync."""
     new_ids = []
+    spike_deals = []
     with get_conn() as conn:
         for d in deals_data:
             existing = conn.execute(
-                "SELECT thread_id, source, manually_expired FROM deals WHERE thread_id = %s",
+                "SELECT thread_id, source, manually_expired, temperature, temp_spike_notified FROM deals WHERE thread_id = %s",
                 (d["thread_id"],),
             ).fetchone()
             if existing is None:
@@ -151,6 +160,17 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                 # Never downgrade a preisfehler deal to a normal deal
                 if existing["source"] == "preisfehler" and source == "new":
                     continue
+
+                new_temp = d["temperature"] or 0
+                old_temp = existing["temperature"] or 0
+
+                # Detect temperature spike for new-source deals
+                if (source == "new"
+                        and not existing["temp_spike_notified"]
+                        and new_temp >= _SPIKE_MIN_TEMP
+                        and (new_temp - old_temp) >= _SPIKE_DELTA):
+                    spike_deals.append({**d, "old_temp": old_temp})
+
                 # Don't overwrite manually expired deals
                 if existing["manually_expired"]:
                     conn.execute(
@@ -162,7 +182,7 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                         "UPDATE deals SET temperature=%s, is_expired=%s, is_hot=%s WHERE thread_id=%s",
                         (d["temperature"], d["is_expired"], d["is_hot"], d["thread_id"]),
                     )
-    return new_ids
+    return new_ids, spike_deals
 
 
 def mark_expired(thread_id):
@@ -193,7 +213,7 @@ def mark_notified(thread_ids):
 def get_all_deals(include_new=False):
     with get_conn() as conn:
         if include_new:
-            cutoff = int(time.time()) - 600
+            cutoff = int(time.time()) - 2400
             rows = conn.execute(
                 """SELECT * FROM deals
                    WHERE source = 'preisfehler'
@@ -246,8 +266,8 @@ def reset_empty_sync():
 
 
 def count_visible_new_this_sync(sync_seq):
-    """Count source='new' deals that are new this sync AND within the 10-min display window."""
-    cutoff = int(time.time()) - 600
+    """Count source='new' deals that are new this sync AND within the 40-min display window."""
+    cutoff = int(time.time()) - 2400
     with get_conn() as conn:
         row = conn.execute(
             "SELECT COUNT(*) as cnt FROM deals WHERE source='new' AND sync_seq=%s AND published_at>=%s",
@@ -333,5 +353,15 @@ def mark_keyword_notified(thread_ids):
     with get_conn() as conn:
         conn.execute(
             "UPDATE deals SET keyword_notified=1 WHERE thread_id = ANY(%s)",
+            (list(thread_ids),),
+        )
+
+
+def mark_spike_notified(thread_ids):
+    if not thread_ids:
+        return
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE deals SET temp_spike_notified=1 WHERE thread_id = ANY(%s)",
             (list(thread_ids),),
         )

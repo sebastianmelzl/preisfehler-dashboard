@@ -56,7 +56,7 @@ def run_sync():
         # Preisfehler
         deals_raw, total = scraper.fetch_deals(limit=50)
         normalised = [_normalise(t) for t in deals_raw]
-        new_ids = db.upsert_deals(normalised, source="preisfehler", sync_seq=current_seq)
+        new_ids, _ = db.upsert_deals(normalised, source="preisfehler", sync_seq=current_seq)
 
         if normalised:
             db.reset_empty_sync()
@@ -90,14 +90,16 @@ def run_sync():
                 notifier.notify_keyword_matches(kw_matches)
                 db.mark_keyword_notified([d["thread_id"] for d in kw_matches])
 
-        # General new deals (no Telegram notifications)
+        # General new deals
         visible_new_count = 0
         try:
             new_raw, _ = scraper.fetch_new_deals(limit=20)
             new_normalised = [_normalise(t) for t in new_raw]
-            db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
+            _, spike_deals = db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
+            if spike_deals:
+                notifier.notify_temperature_spike(spike_deals)
+                db.mark_spike_notified([d["thread_id"] for d in spike_deals])
             db.cleanup_new_deals()
-            # Count exactly the deals shown with green background on dashboard
             visible_new_count = db.count_visible_new_this_sync(current_seq)
         except Exception as e:
             logger.warning("New deals fetch failed: %s", e)

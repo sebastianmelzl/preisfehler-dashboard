@@ -121,6 +121,31 @@ def notify_keyword_matches(deals):
         _send(text)
 
 
+def notify_temperature_spike(deals):
+    """Send Telegram for deals whose temperature rose unusually fast."""
+    for d in deals:
+        title = d.get("title", "")
+        price = d.get("price")
+        old_temp = d.get("old_temp", 0)
+        new_temp = d.get("temperature", 0) or 0
+        merchant = d.get("merchant", "?")
+        url = d.get("url", "")
+        shop_url = d.get("shop_url") or url
+        delta = new_temp - old_temp
+
+        price_str = f"{price:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".") if price else "?"
+
+        text = (
+            f"🔥 <b>Deal heizt auf!</b>\n\n"
+            f"📦 {title}\n\n"
+            f"🌡 <b>{new_temp:.0f}°</b>  (+{delta:.0f}° seit letztem Sync)\n"
+            f"💰 {price_str}\n"
+            f"🏪 {merchant}\n\n"
+            f"🔗 <a href='{shop_url}'>Zum Shop</a>  |  <a href='{url}'>mydealz</a>"
+        )
+        _send(text)
+
+
 def notify_scraper_warning(consecutive):
     text = (
         f"⚠️ <b>Scraper-Warnung</b>\n\n"
