@@ -681,6 +681,7 @@
       grid.style.display = 'grid';
       return;
     }
+    deals.sort((a, b) => (b.is_spiking ? 1 : 0) - (a.is_spiking ? 1 : 0));
     grid.innerHTML = deals.map(d => {
       const expired = d.is_expired;
       const hot = d.is_hot;
