@@ -681,7 +681,13 @@
       grid.style.display = 'grid';
       return;
     }
-    deals.sort((a, b) => (b.is_spiking ? 1 : 0) - (a.is_spiking ? 1 : 0));
+    const dealPriority = d => {
+      if (d.source === 'preisfehler') return 3;
+      if ((d.discount_pct || 0) >= 80) return 2;
+      if (d.is_spiking) return 1;
+      return 0;
+    };
+    deals.sort((a, b) => dealPriority(b) - dealPriority(a));
     grid.innerHTML = deals.map(d => {
       const expired = d.is_expired;
       const hot = d.is_hot;
