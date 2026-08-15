@@ -3,6 +3,7 @@ import os
 import statistics
 import threading
 from datetime import datetime
+import time
 
 from flask import Flask, jsonify, render_template, request
 
@@ -135,6 +136,76 @@ def run_sync():
 
 def run_sync_async():
     threading.Thread(target=run_sync, daemon=True).start()
+
+
+# Fast poll for `new` deals between regular syncs
+def _fast_poll_once():
+    # don't interfere with a running full sync
+    if not _sync_lock.acquire(blocking=False):
+        return
+    try:
+        try:
+            deals_raw, _ = scraper.fetch_new_deals(limit=50)
+        except Exception as e:
+            logger.warning("Fast-poll fetch_new_deals failed: %s", e)
+            return
+
+        normalised = [_normalise(t) for t in deals_raw]
+        if not normalised:
+            return
+
+        # upsert as source='new' (sync_seq 0)
+        _, spike_deals = db.upsert_deals(normalised, source="new", sync_seq=0)
+
+        if spike_deals:
+            try:
+                notifier.notify_temperature_spike(spike_deals)
+                db.mark_spike_notified([d["thread_id"] for d in spike_deals])
+            except Exception as e:
+                logger.warning("Fast-poll spike notify failed: %s", e)
+
+        # keywords
+        try:
+            keywords = db.get_keywords()
+            if keywords:
+                kw_matches = db.get_unnotified_keyword_deals(keywords)
+                if kw_matches:
+                    notifier.notify_keyword_matches(kw_matches)
+                    db.mark_keyword_notified([d["thread_id"] for d in kw_matches])
+        except Exception as e:
+            logger.warning("Fast-poll keyword notify failed: %s", e)
+
+        # cleanup old 'new' deals occasionally
+        try:
+            db.cleanup_new_deals()
+        except Exception:
+            pass
+    finally:
+        _sync_lock.release()
+
+
+def start_fast_poll():
+    interval = int(os.environ.get("FAST_POLL_INTERVAL", "60"))
+    night_interval = int(os.environ.get("FAST_POLL_NIGHT_INTERVAL", "300"))
+
+    def loop():
+        while True:
+            try:
+                _fast_poll_once()
+            except Exception as e:
+                logger.error("Fast-poll iteration failed: %s", e)
+            # choose interval
+            try:
+                if os.environ.get("FAST_POLL_USE_NIGHT_MODE"):
+                    from scheduler import _is_night
+                    cur_interval = night_interval if _is_night() else interval
+                else:
+                    cur_interval = interval
+            except Exception:
+                cur_interval = interval
+            time.sleep(cur_interval)
+
+    threading.Thread(target=loop, daemon=True).start()
 
 
 # ---------------------------------------------------------------------------
@@ -321,6 +392,10 @@ run_sync_async()
 # Start scheduler (always in production, only in main process locally)
 if os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("START_SCHEDULER"):
     sched.start(run_sync)
+
+# Optional: start fast poll for earlier new-deal notifications
+if os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("START_FAST_POLL"):
+    start_fast_poll()
 
 if __name__ == "__main__":
     import scheduler as sched_local
