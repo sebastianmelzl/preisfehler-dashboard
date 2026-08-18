@@ -313,12 +313,16 @@ def get_all_deals(include_new=False):
     with get_conn() as conn:
         if include_new:
             cutoff = int(time.time()) - 2400
+            hot_cutoff = int(time.time()) - 3600
             rows = conn.execute(
                 """SELECT * FROM deals
                    WHERE source = 'preisfehler'
-                      OR (source = 'new' AND (published_at >= %s OR is_hot = 1))
+                      OR (source = 'new' AND (
+                            (is_hot = 0 AND published_at >= %s)
+                            OR (is_hot = 1 AND published_at >= %s)
+                          ))
                    ORDER BY published_at DESC""",
-                (cutoff,),
+                (cutoff, hot_cutoff),
             ).fetchall()
         else:
             rows = conn.execute(
@@ -328,28 +332,20 @@ def get_all_deals(include_new=False):
 
 
 def cleanup_new_deals():
-    """Remove stale non-preisfehler deals.
+    """Remove non-preisfehler deals we discovered more than 1 hour ago.
 
     Anchored to discovered_at (set once on insert) rather than published_at
     (mydealz-provided, sometimes 0/missing) — using published_at let a deal
     with no publish timestamp get deleted and re-inserted with reset
     notified flags on every poll, causing repeat notifications.
 
-    Two-tier retention: deals that never went is_hot get swept after 1h
-    same as before. Deals that did go hot get a full day instead, so a
-    deal that only heats up at, say, minute 65 doesn't get erased by this
-    same cleanup pass moments before it would have qualified.
+    1h covers the longest display window now (hot deals show for up to 1h,
+    same as this cleanup cutoff), so a single tier is enough.
     """
-    now = datetime.utcnow()
-    normal_cutoff = (now - timedelta(hours=1)).isoformat()
-    hot_cutoff = (now - timedelta(days=1)).isoformat()
+    cutoff = (datetime.utcnow() - timedelta(hours=1)).isoformat()
     with get_conn() as conn:
         conn.execute(
-            """DELETE FROM deals
-               WHERE source = 'new'
-                 AND ((is_hot = 0 AND discovered_at < %s)
-                      OR (is_hot = 1 AND discovered_at < %s))""",
-            (normal_cutoff, hot_cutoff),
+            "DELETE FROM deals WHERE source = 'new' AND discovered_at < %s", (cutoff,)
         )
 
 
