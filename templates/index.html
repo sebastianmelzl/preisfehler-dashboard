@@ -684,6 +684,7 @@
         <label class="notif-cat"><input type="checkbox" id="notif-cat-discount"> Hoher Rabatt (≥80%)</label>
         <label class="notif-cat"><input type="checkbox" id="notif-cat-keyword"> Keyword-Treffer</label>
         <label class="notif-cat"><input type="checkbox" id="notif-cat-spike"> Temperatur-Spike</label>
+        <label class="notif-cat"><input type="checkbox" id="notif-cat-any"> 🧪 Jeder neue Deal (zum Testen)</label>
       </div>
       <div class="setting-section-label">Keyword-Benachrichtigungen</div>
       <p class="settings-hint">Deals die eines dieser Wörter im Titel enthalten werden per Telegram benachrichtigt und farbig hervorgehoben.</p>
@@ -1001,8 +1002,8 @@
   });
 
   // Browser notifications (in-tab only, category toggles persisted locally)
-  const NOTIF_CATS = ['preisfehler', 'discount', 'keyword', 'spike'];
-  let notifPrefs = { preisfehler: false, discount: false, keyword: false, spike: false };
+  const NOTIF_CATS = ['preisfehler', 'discount', 'keyword', 'spike', 'any'];
+  let notifPrefs = { preisfehler: false, discount: false, keyword: false, spike: false, any: false };
   try {
     notifPrefs = { ...notifPrefs, ...JSON.parse(localStorage.getItem('notifCategories') || '{}') };
   } catch {}
@@ -1012,6 +1013,7 @@
     discount: document.getElementById('notif-cat-discount'),
     keyword: document.getElementById('notif-cat-keyword'),
     spike: document.getElementById('notif-cat-spike'),
+    any: document.getElementById('notif-cat-any'),
   };
   for (const key of NOTIF_CATS) {
     notifCheckboxes[key].checked = notifPrefs[key];
@@ -1062,7 +1064,7 @@
     if (!document.hidden) updateNotifPermissionUI();
   });
 
-  const _notifiedIds = { preisfehler: new Set(), discount: new Set(), keyword: new Set(), spike: new Set() };
+  const _notifiedIds = { preisfehler: new Set(), discount: new Set(), keyword: new Set(), spike: new Set(), any: new Set() };
 
   function fireBrowserNotification(title, body, url) {
     try {
@@ -1091,6 +1093,10 @@
       if (notifPrefs.spike && d.is_spiking && !_notifiedIds.spike.has(d.thread_id)) {
         _notifiedIds.spike.add(d.thread_id);
         fireBrowserNotification('🔥 Deal heizt auf', `${d.title} — ${Math.round(d.temperature || 0)}°`, d.url);
+      }
+      if (notifPrefs.any && d.is_new_this_sync && !_notifiedIds.any.has(d.thread_id)) {
+        _notifiedIds.any.add(d.thread_id);
+        fireBrowserNotification('🧪 Neuer Deal (Test)', `${d.title} — ${d.price_fmt}`, d.url);
       }
     }
   }
