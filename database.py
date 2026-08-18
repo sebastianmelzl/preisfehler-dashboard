@@ -3,7 +3,7 @@ import logging
 import statistics
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import psycopg2
 import psycopg2.extras
@@ -295,11 +295,17 @@ def get_all_deals(include_new=False):
 
 
 def cleanup_new_deals():
-    """Remove non-preisfehler deals posted more than 1 hour ago."""
-    cutoff = int(time.time()) - 3600
+    """Remove non-preisfehler deals we discovered more than 1 hour ago.
+
+    Anchored to discovered_at (set once on insert) rather than published_at
+    (mydealz-provided, sometimes 0/missing) — using published_at let a deal
+    with no publish timestamp get deleted and re-inserted with reset
+    notified flags on every poll, causing repeat notifications.
+    """
+    cutoff = (datetime.utcnow() - timedelta(hours=1)).isoformat()
     with get_conn() as conn:
         conn.execute(
-            "DELETE FROM deals WHERE source = 'new' AND published_at < %s", (cutoff,)
+            "DELETE FROM deals WHERE source = 'new' AND discovered_at < %s", (cutoff,)
         )
 
 
