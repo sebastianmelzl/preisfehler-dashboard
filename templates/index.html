@@ -269,7 +269,7 @@
     .badge-new { background: #1e3a5f; color: #93c5fd; }
     body.light .badge-new { background: #dbeafe; color: #1d4ed8; }
 
-    .posted-ago { color: var(--text-faint); font-style: italic; white-space: nowrap; flex-basis: 100%; }
+    .posted-ago { color: var(--text-faint); font-style: italic; white-space: nowrap; }
 
     .card.fading-out {
       transition: opacity 0.8s, transform 0.8s;
@@ -1805,7 +1805,7 @@
   }
 
   // Per-card expiry countdown + posted-ago timer — combined into one
-  // "vor X Min (Verschwindet in Y Minuten)" line under the clock icon
+  // "vor X Min (Verschwindet in Y Min)" line under the clock icon
   // instead of a separate hourglass item.
   setInterval(() => {
     const now = Date.now();
