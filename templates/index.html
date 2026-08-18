@@ -898,7 +898,7 @@
             <span><span class="card-icon">${ICON_SHOPPING_BAG}</span>${esc(d.merchant)}</span>
             <span><span class="card-icon">${ICON_TAG}</span>${esc(d.category || '–')}</span>
             <span><span class="card-icon">${ICON_CALENDAR}</span>${d.published_fmt}</span>
-            ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}"></span>` : ''}
+            ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at)}</span>` : ''}
             ${expiresAt ? `<span class="expires-label"><span class="card-icon">${ICON_HOURGLASS}</span><span class="expires-countdown"></span></span>` : ''}
           </div>
           ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener"><span class="card-icon">${ICON_EXTERNAL_LINK}</span>${esc(d.link_host)}</a>` : ''}
@@ -1332,12 +1332,16 @@
     return `vor ${Math.floor(secs / 3600)} Std`;
   }
 
+  function postedAgoHtml(publishedAt) {
+    const secs = Math.round((Date.now() - publishedAt * 1000) / 1000);
+    return `<span class="card-icon">${ICON_CLOCK}</span>` + fmtAgo(secs);
+  }
+
   // Per-card expiry countdown + posted-ago timer
   setInterval(() => {
     const now = Date.now();
     document.querySelectorAll('.posted-ago[data-published]').forEach(el => {
-      const secs = Math.round((now - parseInt(el.dataset.published) * 1000) / 1000);
-      el.innerHTML = `<span class="card-icon">${ICON_CLOCK}</span>` + fmtAgo(secs);
+      el.innerHTML = postedAgoHtml(parseInt(el.dataset.published));
     });
     document.querySelectorAll('.card[data-expires]').forEach(card => {
       const exp = parseInt(card.dataset.expires);
