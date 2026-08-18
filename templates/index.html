@@ -688,7 +688,7 @@
         <button id="btn-notif-permission" class="kw-toggle">Erlauben</button>
       </div>
       <div class="notif-cat-list">
-        <label class="notif-cat"><input type="checkbox" id="notif-cat-preisfehler"> Neuer Preisfehler</label>
+        <label class="notif-cat"><input type="checkbox" id="notif-cat-preisfehler"> Neuer Preisfehler <span class="settings-hint" style="display:inline">(bleibt stehen)</span></label>
         <label class="notif-cat"><input type="checkbox" id="notif-cat-discount"> Hoher Rabatt (≥80%)</label>
         <label class="notif-cat"><input type="checkbox" id="notif-cat-keyword"> Keyword-Treffer</label>
         <label class="notif-cat"><input type="checkbox" id="notif-cat-spike"> Temperatur-Spike</label>
@@ -1089,9 +1089,9 @@
 
   const _notifiedIds = { preisfehler: new Set(), discount: new Set(), keyword: new Set(), spike: new Set(), any: new Set() };
 
-  function fireBrowserNotification(title, body, url) {
+  function fireBrowserNotification(title, body, url, urgent = false) {
     try {
-      const n = new Notification(title, { body });
+      const n = new Notification(title, { body, requireInteraction: urgent });
       n.onclick = () => { window.focus(); window.open(url, '_blank'); n.close(); };
     } catch {}
   }
@@ -1114,7 +1114,7 @@
       if (notifPrefs.preisfehler && d.source === 'preisfehler' && d.is_new_this_sync
           && !_notifiedIds.preisfehler.has(d.thread_id)) {
         _notifiedIds.preisfehler.add(d.thread_id);
-        fireBrowserNotification('🚨 Neuer Preisfehler', `${d.title} — ${d.price_fmt}`, d.url);
+        fireBrowserNotification('🚨 Neuer Preisfehler', `${d.title} — ${d.price_fmt}`, d.url, true);
       }
       if (notifPrefs.discount && d.source === 'new' && d.is_new_this_sync && (d.discount_pct || 0) >= 80
           && !_notifiedIds.discount.has(d.thread_id)) {
