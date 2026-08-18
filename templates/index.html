@@ -815,12 +815,18 @@
       grid.style.display = 'grid';
       return;
     }
+    // Four strict, non-overlapping blocks: neu > preisfehler > hot > rest,
+    // each internally sorted by score. Whichever tier a deal falls into
+    // first is where it stays — no interleaving between blocks.
+    const dealTier = d => {
+      if (d.is_new_this_sync) return 0;
+      if (d.source === 'preisfehler') return 1;
+      if (d.is_hot) return 2;
+      return 3;
+    };
     deals.sort((a, b) => {
-      const newDiff = (b.is_new_this_sync ? 1 : 0) - (a.is_new_this_sync ? 1 : 0);
-      if (newDiff !== 0) return newDiff;
-      const pfDiff = (b.source === 'preisfehler' ? 1 : 0) - (a.source === 'preisfehler' ? 1 : 0);
-      if (pfDiff !== 0) return pfDiff;
-      return (b.score || 0) - (a.score || 0);
+      const tierDiff = dealTier(a) - dealTier(b);
+      return tierDiff !== 0 ? tierDiff : (b.score || 0) - (a.score || 0);
     });
     grid.innerHTML = deals.map(d => {
       const expired = d.is_expired;
