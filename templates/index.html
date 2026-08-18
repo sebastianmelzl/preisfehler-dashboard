@@ -1054,6 +1054,14 @@
     updateNotifPermissionUI();
   });
 
+  // Permission can also change outside this page (browser site settings) —
+  // re-check whenever the tab regains focus/visibility instead of only on
+  // load and on button click, so that path updates the UI too.
+  window.addEventListener('focus', updateNotifPermissionUI);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) updateNotifPermissionUI();
+  });
+
   const _notifiedIds = { preisfehler: new Set(), discount: new Set(), keyword: new Set(), spike: new Set() };
 
   function fireBrowserNotification(title, body, url) {
