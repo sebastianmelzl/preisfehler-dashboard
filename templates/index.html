@@ -756,7 +756,7 @@
       if (!nextSyncTime) { syncCountdown.textContent = '–:––'; return; }
       const secs = Math.round((nextSyncTime - Date.now()) / 1000);
       if (secs <= 0) {
-        syncCountdown.textContent = '⏳';
+        syncCountdown.innerHTML = `<span style="display:inline-flex;vertical-align:-0.08em">${ICON_HOURGLASS.replace('<svg ', '<svg width="0.85em" height="0.85em" ')}</span>`;
         if (!fastPolling) {
           fastPolling = true;
           const poll = setInterval(async () => {
@@ -915,7 +915,7 @@
       if (!s.last_sync) { syncStatus.textContent = 'Noch nicht synchronisiert'; return; }
       const ts = new Date(s.last_sync + 'Z').toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
       if (s.is_running) {
-        syncStatus.textContent = '⏳ Läuft…';
+        syncStatus.innerHTML = `<span class="card-icon">${ICON_HOURGLASS}</span>Läuft…`;
       } else {
         const visible = Array.from(grid.querySelectorAll('.card:not(.fading-out)'))
           .filter(c => getComputedStyle(c).display !== 'none').length;
