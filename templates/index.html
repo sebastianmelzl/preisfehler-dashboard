@@ -1145,7 +1145,26 @@
     if (!document.hidden) updateNotifPermissionUI();
   });
 
-  const _notifiedIds = { preisfehler: new Set(), discount: new Set(), keyword: new Set(), spike: new Set(), any: new Set() };
+  // Persisted in localStorage (not just in-memory) so a page reload
+  // doesn't re-fire notifications for deals we already notified about.
+  const _notifiedIds = {};
+  for (const key of NOTIF_CATS) {
+    let seen = [];
+    try {
+      seen = JSON.parse(localStorage.getItem('notifSeen_' + key) || '[]');
+    } catch {}
+    _notifiedIds[key] = new Set(seen);
+  }
+
+  function markNotified(category, threadId) {
+    _notifiedIds[category].add(threadId);
+    let ids = Array.from(_notifiedIds[category]);
+    if (ids.length > 500) {
+      ids = ids.slice(ids.length - 500);
+      _notifiedIds[category] = new Set(ids);
+    }
+    localStorage.setItem('notifSeen_' + category, JSON.stringify(ids));
+  }
 
   // Native notifications have no border/color styling API — an icon is the
   // only visual lever available, so it stands in for the "red border" idea.
@@ -1207,24 +1226,24 @@
     for (const d of deals) {
       if (notifPrefs.preisfehler && d.source === 'preisfehler' && !d.is_expired
           && !_notifiedIds.preisfehler.has(d.thread_id)) {
-        _notifiedIds.preisfehler.add(d.thread_id);
+        markNotified('preisfehler', d.thread_id);
         queue('🚨 Neuer Preisfehler', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.preisfehler);
       }
       if (notifPrefs.discount && d.source === 'new' && !d.is_expired && (d.discount_pct || 0) >= 80
           && !_notifiedIds.discount.has(d.thread_id)) {
-        _notifiedIds.discount.add(d.thread_id);
+        markNotified('discount', d.thread_id);
         queue(`💥 -${d.discount_pct}% Rabatt`, `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.discount);
       }
       if (notifPrefs.keyword && d.keyword_match && !d.is_expired && !_notifiedIds.keyword.has(d.thread_id)) {
-        _notifiedIds.keyword.add(d.thread_id);
+        markNotified('keyword', d.thread_id);
         queue(`🔍 Keyword: "${d.keyword_match}"`, d.title, d.url, notifUrgent.keyword);
       }
       if (notifPrefs.spike && d.is_spiking && !d.is_expired && !_notifiedIds.spike.has(d.thread_id)) {
-        _notifiedIds.spike.add(d.thread_id);
+        markNotified('spike', d.thread_id);
         queue('🔥 Deal heizt auf', `${d.title} — ${Math.round(d.temperature || 0)}°`, d.url, notifUrgent.spike);
       }
       if (notifPrefs.any && !d.is_expired && !_notifiedIds.any.has(d.thread_id)) {
-        _notifiedIds.any.add(d.thread_id);
+        markNotified('any', d.thread_id);
         queue('🧪 Neuer Deal (Test)', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.any);
       }
     }
