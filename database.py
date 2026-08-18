@@ -70,7 +70,10 @@ def init_db():
                 availability_checked_at  INTEGER DEFAULT 0,
                 updated_at               INTEGER DEFAULT 0,
                 is_edited                INTEGER DEFAULT 0,
-                edit_checked              INTEGER DEFAULT 0
+                edit_checked              INTEGER DEFAULT 0,
+                comment_count             INTEGER DEFAULT 0,
+                comment_count_updated_at  INTEGER DEFAULT 0,
+                comment_spike_at          INTEGER DEFAULT 0
             )
         """)
         conn.execute("""
@@ -130,6 +133,9 @@ def init_db():
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS updated_at INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS is_edited INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS edit_checked INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS comment_count INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS comment_count_updated_at INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS comment_spike_at INTEGER DEFAULT 0",
         ]:
             conn.execute(col_sql)
     logger.info("Database initialised")
@@ -195,7 +201,8 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
         for d in deals_data:
             existing = conn.execute(
                 """SELECT thread_id, source, manually_expired, temperature,
-                          temp_spike_notified, temp_updated_at
+                          temp_spike_notified, temp_updated_at,
+                          comment_count, comment_count_updated_at, comment_spike_at
                    FROM deals WHERE thread_id = %s""",
                 (d["thread_id"],),
             ).fetchone()
@@ -206,8 +213,8 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                         merchant, category, temperature, is_expired, is_hot,
                         published_at, discovered_at, notified, url, source,
                         link_host, shop_url, sync_seq, temp_updated_at, initial_temp,
-                        updated_at)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        updated_at, comment_count, comment_count_updated_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                     (
                         d["thread_id"], d["title"], d["title_slug"],
                         d["price"], d["next_best"], d["discount_pct"],
@@ -216,6 +223,7 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                         datetime.utcnow().isoformat(), d["url"], source,
                         d.get("link_host", ""), d.get("shop_url", ""), sync_seq, now,
                         d["temperature"] or 0, d.get("updated_at") or 0,
+                        d.get("comment_count") or 0, now,
                     ),
                 )
                 new_ids.append(d["thread_id"])
@@ -246,6 +254,26 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                         "dt_seconds": dt_seconds,
                     })
 
+                # Comment-velocity spike: extrapolate the count gain since the
+                # last sync to a per-5-minute rate. Requires a minimum elapsed
+                # time and absolute gain so a single sync's noise can't trigger
+                # it. comment_spike_at, once set, is left alone here (not
+                # cleared) — the API layer decides when the 1h highlight window
+                # has passed.
+                MIN_C_DT = 30
+                MIN_C_DIFF = 5
+                C_SPIKE_PER_5MIN = 30
+                new_count = d.get("comment_count") or 0
+                old_count = existing["comment_count"] or 0
+                last_c_updated = existing["comment_count_updated_at"] or 0
+                c_dt = (now - last_c_updated) if last_c_updated > 0 else 0
+                count_diff = new_count - old_count
+                comment_spike_at = existing["comment_spike_at"] or 0
+                if c_dt >= MIN_C_DT and count_diff >= MIN_C_DIFF:
+                    rate_5min = count_diff / c_dt * 300
+                    if rate_5min >= C_SPIKE_PER_5MIN:
+                        comment_spike_at = now
+
                 # Don't overwrite manually expired deals
                 # (source is safe to write here — the "never downgrade" guard
                 # above already skipped preisfehler->new, so this can only
@@ -253,14 +281,20 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                 if existing["manually_expired"]:
                     conn.execute(
                         """UPDATE deals SET temperature=%s, is_hot=%s,
-                           temp_updated_at=%s, temp_rate=%s, source=%s, updated_at=%s WHERE thread_id=%s""",
-                        (d["temperature"], d["is_hot"], now, rate, source, d.get("updated_at") or 0, d["thread_id"]),
+                           temp_updated_at=%s, temp_rate=%s, source=%s, updated_at=%s,
+                           comment_count=%s, comment_count_updated_at=%s, comment_spike_at=%s
+                           WHERE thread_id=%s""",
+                        (d["temperature"], d["is_hot"], now, rate, source, d.get("updated_at") or 0,
+                         new_count, now, comment_spike_at, d["thread_id"]),
                     )
                 else:
                     conn.execute(
                         """UPDATE deals SET temperature=%s, is_expired=%s, is_hot=%s,
-                           temp_updated_at=%s, temp_rate=%s, source=%s, updated_at=%s WHERE thread_id=%s""",
-                        (d["temperature"], d["is_expired"], d["is_hot"], now, rate, source, d.get("updated_at") or 0, d["thread_id"]),
+                           temp_updated_at=%s, temp_rate=%s, source=%s, updated_at=%s,
+                           comment_count=%s, comment_count_updated_at=%s, comment_spike_at=%s
+                           WHERE thread_id=%s""",
+                        (d["temperature"], d["is_expired"], d["is_hot"], now, rate, source, d.get("updated_at") or 0,
+                         new_count, now, comment_spike_at, d["thread_id"]),
                     )
 
     spike_deals = _detect_spikes(candidates)

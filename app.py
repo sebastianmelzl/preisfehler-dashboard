@@ -70,6 +70,7 @@ def _normalise(t):
         "is_hot": int(bool(t.get("isHot"))),
         "published_at": t.get("publishedAt") or int(time.time()),
         "updated_at": t.get("updatedAt") or 0,
+        "comment_count": t.get("commentCount") or 0,
         "url": scraper.deal_url(t),
         "shop_url": f"https://www.mydealz.de/visit/threadmain/{t['threadId']}",
         "link_host": (t.get("linkHost") or "").lower(),
@@ -275,6 +276,10 @@ def api_deals():
             "is_new_this_sync": int(d.get("sync_seq") or 0) == current_seq and current_seq > 0,
             "keyword_match": keyword_match,
             "is_spiking": is_spiking,
+            "is_comment_spike": (
+                bool(d.get("comment_spike_at"))
+                and (int(time.time()) - int(d.get("comment_spike_at") or 0)) < 3600
+            ),
         })
     return jsonify(result)
 
