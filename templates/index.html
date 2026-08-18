@@ -777,7 +777,10 @@
       grid.style.display = 'grid';
       return;
     }
-    deals.sort((a, b) => (b.score || 0) - (a.score || 0));
+    deals.sort((a, b) => {
+      const newDiff = (b.is_new_this_sync ? 1 : 0) - (a.is_new_this_sync ? 1 : 0);
+      return newDiff !== 0 ? newDiff : (b.score || 0) - (a.score || 0);
+    });
     grid.innerHTML = deals.map(d => {
       const expired = d.is_expired;
       const hot = d.is_hot;
@@ -806,8 +809,9 @@
         ? `<span class="discount">-${d.discount_pct}%</span>` : '';
 
       const barWidth = d.hot_bar_width || 0;
+      const expiresWindow = 2400000 + (hot ? 1800000 : 0); // +30 min for hot deals
       const expiresAt = isNew && d.published_at
-        ? d.published_at * 1000 + 2400000
+        ? d.published_at * 1000 + expiresWindow
         : null;
 
       return `
