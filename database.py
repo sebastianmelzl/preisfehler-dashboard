@@ -69,7 +69,8 @@ def init_db():
                 availability_status      TEXT DEFAULT NULL,
                 availability_checked_at  INTEGER DEFAULT 0,
                 updated_at               INTEGER DEFAULT 0,
-                is_edited                INTEGER DEFAULT 0
+                is_edited                INTEGER DEFAULT 0,
+                edit_checked              INTEGER DEFAULT 0
             )
         """)
         conn.execute("""
@@ -128,6 +129,7 @@ def init_db():
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS availability_checked_at INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS updated_at INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS is_edited INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS edit_checked INTEGER DEFAULT 0",
         ]:
             conn.execute(col_sql)
     logger.info("Database initialised")
@@ -272,9 +274,25 @@ def mark_expired(thread_id):
         )
 
 
-def mark_edited(thread_id):
+def mark_edit_checked(thread_id, is_edited):
     with get_conn() as conn:
-        conn.execute("UPDATE deals SET is_edited=1 WHERE thread_id=%s", (thread_id,))
+        conn.execute(
+            "UPDATE deals SET edit_checked=1, is_edited=%s WHERE thread_id=%s",
+            (1 if is_edited else 0, thread_id),
+        )
+
+
+def get_deals_needing_edit_check(limit=5):
+    """Active preisfehler deals never checked against mydealz's own
+    "Aktualisiert vor …" label — covers deals inserted before this feature
+    existed, backfilled a few at a time to bound extra HTTP calls."""
+    with get_conn() as conn:
+        return conn.execute(
+            """SELECT thread_id, url FROM deals
+               WHERE source = 'preisfehler' AND is_expired = 0 AND edit_checked = 0
+               ORDER BY published_at DESC LIMIT %s""",
+            (limit,),
+        ).fetchall()
 
 
 def get_deals_needing_availability_check(max_age_seconds, limit=10):
