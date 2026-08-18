@@ -847,9 +847,10 @@
         ? `<span class="discount">-${d.discount_pct}%</span>` : '';
 
       const barWidth = d.hot_bar_width || 0;
-      const expiresWindow = 2400000 + (hot ? 1800000 : 0); // +30 min for hot deals
-      const expiresAt = isNew && d.published_at
-        ? d.published_at * 1000 + expiresWindow
+      // Hot 'new' deals don't auto-expire on a timer — they stick around
+      // like preisfehler cards until manually dismissed via the X button.
+      const expiresAt = isNew && d.published_at && !hot
+        ? d.published_at * 1000 + 2400000
         : null;
 
       return `
@@ -857,7 +858,7 @@
           <div class="preisfehler-label"><span class="card-icon">${ICON_ALERT_TRIANGLE}</span>Preisfehler</div>
           ${d.is_spiking ? `<span class="spike-badge"><span class="card-icon">${ICON_TRENDING_UP}</span>heizt auf</span>` : ''}
           ${d.keyword_match ? `<span class="keyword-badge"><span class="card-icon">${ICON_SEARCH}</span>${esc(d.keyword_match)}</span>` : ''}
-          ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
+          ${!expired && (!isNew || hot) ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
           <div class="card-top">
             <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
             <div class="badge-group">${availBadge}${scoreBadge}${badge}</div>

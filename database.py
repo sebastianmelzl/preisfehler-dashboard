@@ -316,7 +316,7 @@ def get_all_deals(include_new=False):
             rows = conn.execute(
                 """SELECT * FROM deals
                    WHERE source = 'preisfehler'
-                      OR (source = 'new' AND published_at >= %s)
+                      OR (source = 'new' AND (published_at >= %s OR is_hot = 1))
                    ORDER BY published_at DESC""",
                 (cutoff,),
             ).fetchall()
