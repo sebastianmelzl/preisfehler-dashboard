@@ -751,6 +751,21 @@
         <label class="notif-cat"><input type="checkbox" id="voice-preisfehler"> Sprachansage bei neuem Preisfehler</label>
         <button id="btn-voice-test" class="kw-toggle">Testen</button>
       </div>
+      <div class="notif-cat-row">
+        <label class="notif-cat" for="voice-select">Stimme</label>
+        <select id="voice-select" class="kw-toggle">
+          <option value="de-CH-LeniNeural">🎤 Leni (CH)</option>
+          <option value="de-DE-KatjaNeural">🎤 Katja</option>
+          <option value="de-DE-AmalaNeural">🎤 Amala</option>
+          <option value="de-DE-MajaNeural">🎤 Maja</option>
+          <option value="de-DE-SeraphinaNeural">🎤 Seraphina</option>
+          <option value="de-DE-ConradNeural">🎤 Conrad</option>
+          <option value="de-DE-KillianNeural">🎤 Killian</option>
+          <option value="de-DE-RalfNeural">🎤 Ralf</option>
+          <option value="de-AT-IngridNeural">🎤 Ingrid (AT)</option>
+          <option value="de-AT-JonasNeural">🎤 Jonas (AT)</option>
+        </select>
+      </div>
       <div class="setting-section-label">Keyword-Benachrichtigungen</div>
       <p class="settings-hint">Deals die eines dieser Wörter im Titel enthalten werden per Telegram benachrichtigt und farbig hervorgehoben.</p>
       <div class="kw-add-row">
@@ -1269,28 +1284,42 @@
     localStorage.setItem('voicePreisfehler', voiceEnabled);
   });
 
+  const voiceSelect = document.getElementById('voice-select');
+  voiceSelect.value = localStorage.getItem('ttsVoice') || 'de-CH-LeniNeural';
+  voiceSelect.addEventListener('change', () => {
+    localStorage.setItem('ttsVoice', voiceSelect.value);
+  });
+
   function playGong() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const now = ctx.currentTime;
-      const master = ctx.createGain();
-      master.gain.value = 0.35;
-      master.connect(ctx.destination);
-      const fundamental = 110;
-      const partials = [1, 1.48, 2.4, 3.2, 4.3]; // inharmonic ratios -> metallic gong-like tone
-      partials.forEach((ratio, i) => {
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = fundamental * ratio;
-        const gain = ctx.createGain();
-        const peak = 0.8 / (i + 1);
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(peak, now + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 3.5 + i * 0.3);
-        osc.connect(gain);
-        gain.connect(master);
-        osc.start(now);
-        osc.stop(now + 4.5);
+      // Westminster Chimes opening phrase ("Big Ben") — E5, C#5, D5, G4
+      const notes = [659.25, 554.37, 587.33, 392.00];
+      const noteGap = 0.65;
+      // Bell partials (prime, minor-third tierce, quint, octave nominal) instead of
+      // plain harmonics — the tierce is what makes it read as a bell, not a beep.
+      const partials = [
+        { ratio: 0.5,  gain: 0.25 },
+        { ratio: 1,    gain: 0.55 },
+        { ratio: 1.19, gain: 0.4 },
+        { ratio: 1.5,  gain: 0.28 },
+        { ratio: 2,    gain: 0.2 },
+      ];
+      notes.forEach((freq, i) => {
+        const start = ctx.currentTime + i * noteGap;
+        partials.forEach(({ ratio, gain: peak }) => {
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = freq * ratio;
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(peak, start + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 1.8);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + 2.0);
+        });
       });
     } catch (e) {}
   }
@@ -1299,18 +1328,36 @@
     return value.toFixed(2).replace('.', ',').replace(',00', '');
   }
 
-  function speakPreisfehler(d) {
-    if (!('speechSynthesis' in window)) return;
+  // Sequential queue so overlapping preisfehler don't talk over each other
+  let _ttsQueue = Promise.resolve();
+
+  async function _speakViaServer(text) {
     try {
-      let text = `Neuer Preisfehler: ${d.title}`;
-      if (d.price != null) text += ` für ${fmtEuroSpoken(d.price)} Euro`;
-      if (d.next_best && d.price != null && d.next_best > d.price) {
-        text += `. Du sparst ${fmtEuroSpoken(d.next_best - d.price)} Euro`;
-      }
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = 'de-DE';
-      speechSynthesis.speak(utter);
+      const resp = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: voiceSelect.value }),
+      });
+      if (!resp.ok) return;
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      await new Promise((resolve) => {
+        audio.onended = resolve;
+        audio.onerror = resolve;
+        audio.play().catch(resolve);
+      });
+      URL.revokeObjectURL(url);
     } catch (e) {}
+  }
+
+  function speakPreisfehler(d) {
+    let text = `Neuer Preisfehler: ${d.title}`;
+    if (d.price != null) text += ` für ${fmtEuroSpoken(d.price)} Euro`;
+    if (d.next_best && d.price != null && d.next_best > d.price) {
+      text += `. Du sparst ${fmtEuroSpoken(d.next_best - d.price)} Euro`;
+    }
+    _ttsQueue = _ttsQueue.then(() => _speakViaServer(text)).catch(() => {});
   }
 
   document.getElementById('btn-gong-test').addEventListener('click', () => playGong());

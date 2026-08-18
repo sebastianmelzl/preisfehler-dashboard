@@ -1,6 +1,7 @@
 import logging
 import os
 import statistics
+import subprocess
 import threading
 import time
 from datetime import datetime
@@ -19,6 +20,13 @@ app = Flask(__name__)
 
 _deploy_time = datetime.utcnow()
 _sync_lock = threading.Lock()
+
+ALLOWED_VOICES = {
+    "de-DE-KatjaNeural", "de-DE-AmalaNeural", "de-DE-MajaNeural",
+    "de-DE-SeraphinaNeural", "de-DE-ConradNeural", "de-DE-KillianNeural",
+    "de-DE-RalfNeural", "de-AT-IngridNeural", "de-AT-JonasNeural", "de-CH-LeniNeural",
+}
+DEFAULT_VOICE = "de-CH-LeniNeural"
 
 
 @app.before_request
@@ -346,6 +354,38 @@ def api_telegram_test():
         "telegram": {"ok": tg_ok, "message": tg_msg},
         "ntfy": {"ok": ntfy_ok, "message": ntfy_msg},
     })
+
+
+@app.route("/api/tts", methods=["POST"])
+def api_tts():
+    """Generate speech via edge-tts (Microsoft Neural voices) and return MP3 bytes."""
+    data = request.json or {}
+    text = data.get("text", "").strip()
+    if not text:
+        return jsonify({"error": "no text"}), 400
+    voice = data.get("voice", DEFAULT_VOICE)
+    if voice not in ALLOWED_VOICES:
+        voice = DEFAULT_VOICE
+    mp3_path = f"/tmp/preisfehler_tts_{int(time.time() * 1000)}_{os.getpid()}.mp3"
+    try:
+        subprocess.run(
+            ["python3", "-m", "edge_tts", "--voice", voice, "--text", text, "--write-media", mp3_path],
+            check=True, timeout=15, capture_output=True,
+        )
+        with open(mp3_path, "rb") as f:
+            audio_data = f.read()
+        return Response(
+            audio_data, mimetype="audio/mpeg",
+            headers={"Cache-Control": "no-cache", "Content-Length": str(len(audio_data))},
+        )
+    except Exception as e:
+        logger.error("TTS error: %s", e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        try:
+            os.remove(mp3_path)
+        except OSError:
+            pass
 
 
 @app.route("/api/debug/new-deals")
