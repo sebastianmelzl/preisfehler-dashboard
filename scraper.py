@@ -28,6 +28,7 @@ query searchThreads($input: ThreadSearchFilter!) {
 """
 
 _session = None
+_xsrf_token = None
 
 
 def _get_session():
@@ -47,6 +48,13 @@ def _refresh_xsrf():
     )
     raw = sess.cookies.get("xsrf_t", "")
     return requests.utils.unquote(raw).strip('"')
+
+
+def _get_xsrf(force_refresh=False):
+    global _xsrf_token
+    if _xsrf_token is None or force_refresh:
+        _xsrf_token = _refresh_xsrf()
+    return _xsrf_token
 
 
 def _parse_deals(html_src):
@@ -90,7 +98,7 @@ def _parse_deals(html_src):
 def _fetch(variables, referer, limit, retries=2):
     for attempt in range(retries + 1):
         try:
-            xsrf = _refresh_xsrf()
+            xsrf = _get_xsrf(force_refresh=attempt > 0)
             sess = _get_session()
             resp = sess.post(
                 GRAPHQL_URL,

@@ -236,17 +236,20 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                     })
 
                 # Don't overwrite manually expired deals
+                # (source is safe to write here — the "never downgrade" guard
+                # above already skipped preisfehler->new, so this can only
+                # keep it the same or upgrade new->preisfehler)
                 if existing["manually_expired"]:
                     conn.execute(
                         """UPDATE deals SET temperature=%s, is_hot=%s,
-                           temp_updated_at=%s, temp_rate=%s WHERE thread_id=%s""",
-                        (d["temperature"], d["is_hot"], now, rate, d["thread_id"]),
+                           temp_updated_at=%s, temp_rate=%s, source=%s WHERE thread_id=%s""",
+                        (d["temperature"], d["is_hot"], now, rate, source, d["thread_id"]),
                     )
                 else:
                     conn.execute(
                         """UPDATE deals SET temperature=%s, is_expired=%s, is_hot=%s,
-                           temp_updated_at=%s, temp_rate=%s WHERE thread_id=%s""",
-                        (d["temperature"], d["is_expired"], d["is_hot"], now, rate, d["thread_id"]),
+                           temp_updated_at=%s, temp_rate=%s, source=%s WHERE thread_id=%s""",
+                        (d["temperature"], d["is_expired"], d["is_hot"], now, rate, source, d["thread_id"]),
                     )
 
     spike_deals = _detect_spikes(candidates)

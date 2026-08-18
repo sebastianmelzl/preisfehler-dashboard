@@ -2,9 +2,10 @@ import logging
 import os
 import statistics
 import threading
+import time
 from datetime import datetime
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 
 import database as db
 import notifier
@@ -17,6 +18,25 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 _sync_lock = threading.Lock()
+
+
+@app.before_request
+def require_auth():
+    """Gate every route but /health behind HTTP Basic Auth.
+
+    Only enforced when DASHBOARD_PASSWORD is set, so local dev without
+    the env var keeps working unauthenticated.
+    """
+    if request.path == "/health":
+        return
+    password = os.environ.get("DASHBOARD_PASSWORD")
+    if not password:
+        return
+    auth = request.authorization
+    if not auth or auth.username != os.environ.get("DASHBOARD_USER", "admin") or auth.password != password:
+        return Response(
+            "Zugriff verweigert", 401, {"WWW-Authenticate": 'Basic realm="Preisfehler Dashboard"'}
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +59,7 @@ def _normalise(t):
         "temperature": t.get("temperature") or 0,
         "is_expired": int(bool(t.get("isExpired"))),
         "is_hot": int(bool(t.get("isHot"))),
-        "published_at": t.get("publishedAt") or 0,
+        "published_at": t.get("publishedAt") or int(time.time()),
         "url": scraper.deal_url(t),
         "shop_url": f"https://www.mydealz.de/visit/threadmain/{t['threadId']}",
         "link_host": (t.get("linkHost") or "").lower(),
@@ -318,7 +338,13 @@ def api_debug_components():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok"})
+    status = db.get_sync_status()
+    consecutive_empty = status.get("consecutive_empty") or 0
+    return jsonify({
+        "status": "ok" if consecutive_empty < 3 else "degraded",
+        "consecutive_empty_syncs": consecutive_empty,
+        "last_sync": status.get("last_sync"),
+    })
 
 
 # ---------------------------------------------------------------------------
