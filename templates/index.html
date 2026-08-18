@@ -1137,9 +1137,22 @@
 
   const _notifiedIds = { preisfehler: new Set(), discount: new Set(), keyword: new Set(), spike: new Set(), any: new Set() };
 
+  // Native notifications have no border/color styling API — an icon is the
+  // only visual lever available, so it stands in for the "red border" idea.
+  const NOTIF_ICON_URGENT = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><circle cx="96" cy="96" r="80" fill="#ef4444"/></svg>'
+  );
+  const NOTIF_ICON_NORMAL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><circle cx="96" cy="96" r="80" fill="#64748b"/></svg>'
+  );
+
   function fireBrowserNotification(title, body, url, urgent = false) {
     try {
-      const n = new Notification(title, { body, requireInteraction: urgent });
+      const n = new Notification(title, {
+        body,
+        requireInteraction: urgent,
+        icon: urgent ? NOTIF_ICON_URGENT : NOTIF_ICON_NORMAL,
+      });
       n.onclick = () => { window.focus(); window.open(url, '_blank'); n.close(); };
     } catch {}
   }
