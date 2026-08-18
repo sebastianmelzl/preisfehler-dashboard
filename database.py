@@ -67,7 +67,8 @@ def init_db():
                 temp_rate            REAL    DEFAULT 0,
                 initial_temp         REAL    DEFAULT 0,
                 availability_status      TEXT DEFAULT NULL,
-                availability_checked_at  INTEGER DEFAULT 0
+                availability_checked_at  INTEGER DEFAULT 0,
+                updated_at               INTEGER DEFAULT 0
             )
         """)
         conn.execute("""
@@ -124,6 +125,7 @@ def init_db():
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS fast_poll_enabled INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS availability_status TEXT DEFAULT NULL",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS availability_checked_at INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS updated_at INTEGER DEFAULT 0",
         ]:
             conn.execute(col_sql)
     logger.info("Database initialised")
@@ -199,8 +201,9 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                        (thread_id, title, title_slug, price, next_best, discount_pct,
                         merchant, category, temperature, is_expired, is_hot,
                         published_at, discovered_at, notified, url, source,
-                        link_host, shop_url, sync_seq, temp_updated_at, initial_temp)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s,%s,%s)""",
+                        link_host, shop_url, sync_seq, temp_updated_at, initial_temp,
+                        updated_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s,%s,%s,%s)""",
                     (
                         d["thread_id"], d["title"], d["title_slug"],
                         d["price"], d["next_best"], d["discount_pct"],
@@ -208,7 +211,7 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                         d["is_expired"], d["is_hot"], d["published_at"],
                         datetime.utcnow().isoformat(), d["url"], source,
                         d.get("link_host", ""), d.get("shop_url", ""), sync_seq, now,
-                        d["temperature"] or 0,
+                        d["temperature"] or 0, d.get("updated_at") or 0,
                     ),
                 )
                 new_ids.append(d["thread_id"])
@@ -246,14 +249,14 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                 if existing["manually_expired"]:
                     conn.execute(
                         """UPDATE deals SET temperature=%s, is_hot=%s,
-                           temp_updated_at=%s, temp_rate=%s, source=%s WHERE thread_id=%s""",
-                        (d["temperature"], d["is_hot"], now, rate, source, d["thread_id"]),
+                           temp_updated_at=%s, temp_rate=%s, source=%s, updated_at=%s WHERE thread_id=%s""",
+                        (d["temperature"], d["is_hot"], now, rate, source, d.get("updated_at") or 0, d["thread_id"]),
                     )
                 else:
                     conn.execute(
                         """UPDATE deals SET temperature=%s, is_expired=%s, is_hot=%s,
-                           temp_updated_at=%s, temp_rate=%s, source=%s WHERE thread_id=%s""",
-                        (d["temperature"], d["is_expired"], d["is_hot"], now, rate, source, d["thread_id"]),
+                           temp_updated_at=%s, temp_rate=%s, source=%s, updated_at=%s WHERE thread_id=%s""",
+                        (d["temperature"], d["is_expired"], d["is_hot"], now, rate, source, d.get("updated_at") or 0, d["thread_id"]),
                     )
 
     spike_deals = _detect_spikes(candidates)

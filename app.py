@@ -69,6 +69,7 @@ def _normalise(t):
         "is_expired": int(bool(t.get("isExpired"))),
         "is_hot": int(bool(t.get("isHot"))),
         "published_at": t.get("publishedAt") or int(time.time()),
+        "updated_at": t.get("updatedAt") or 0,
         "url": scraper.deal_url(t),
         "shop_url": f"https://www.mydealz.de/visit/threadmain/{t['threadId']}",
         "link_host": (t.get("linkHost") or "").lower(),
