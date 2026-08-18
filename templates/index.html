@@ -103,6 +103,13 @@
       color: var(--text-muted);
     }
 
+    .deploy-info {
+      font-size: 0.68rem;
+      color: var(--text-faint);
+    }
+    .deploy-info::before { content: '· '; }
+    .deploy-info:empty { display: none; }
+
     .countdown-block {
       display: flex;
       flex-direction: column;
@@ -628,6 +635,7 @@
     <h1>Mydealz Dashboard</h1>
     <div class="header-meta">
       <span id="sync-status">Lädt…</span>
+      <span id="deploy-info" class="deploy-info"></span>
     </div>
   </div>
   <div class="countdown-block">
@@ -706,6 +714,7 @@
   const loading = document.getElementById('loading');
   const errorMsg = document.getElementById('error-msg');
   const syncStatus = document.getElementById('sync-status');
+  const deployInfo = document.getElementById('deploy-info');
   const syncCountdown = document.getElementById('sync-countdown');
   const btnSync = document.getElementById('btn-sync');
 
@@ -855,6 +864,15 @@
     try {
       const res = await fetch('/api/sync/status');
       const s = await res.json();
+
+      if (s.deployed_at) {
+        const dt = new Date(s.deployed_at + 'Z');
+        const dtStr = dt.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}) + ' ' +
+                      dt.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+        deployInfo.textContent = `Deploy ${dtStr}`;
+        deployInfo.title = s.deploy_commit ? `Commit ${s.deploy_commit}` : '';
+      }
+
       if (!s.last_sync) { syncStatus.textContent = 'Noch nicht synchronisiert'; return; }
       const ts = new Date(s.last_sync + 'Z').toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
       if (s.is_running) {

@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+_deploy_time = datetime.utcnow()
 _sync_lock = threading.Lock()
 
 
@@ -272,6 +273,8 @@ def api_sync():
 def api_sync_status():
     status = db.get_sync_status()
     status["next_sync"] = sched.next_run()
+    status["deployed_at"] = _deploy_time.isoformat()
+    status["deploy_commit"] = os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:7]
     return jsonify(status)
 
 
