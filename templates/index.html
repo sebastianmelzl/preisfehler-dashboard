@@ -528,6 +528,11 @@
       color: var(--text-faint);
     }
 
+    .notif-perm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .notif-cat-list { display: flex; flex-direction: column; gap: 6px; }
+    .notif-cat { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer; }
+    .notif-cat input { accent-color: var(--spinner-head); cursor: pointer; }
+
     .kw-add-row { display: flex; gap: 8px; }
     .kw-add-row input {
       flex: 1;
@@ -667,6 +672,18 @@
           <p class="settings-hint">Fragt zusätzlich alle 60s (nachts 5 Min) /deals-new ab, um neue Deals schneller zu erkennen als der reguläre Sync.</p>
         </div>
         <button id="btn-fastpoll-toggle" class="kw-toggle">Aus</button>
+      </div>
+      <div class="setting-section-label">Browser-Benachrichtigungen</div>
+      <p class="settings-hint">Zeigt eine Desktop-Meldung, solange dieser Tab offen ist. Ohne Tab kommt weiterhin nur Telegram/ntfy.</p>
+      <div class="notif-perm-row">
+        <span id="notifPermStatus" class="settings-hint">Berechtigung: —</span>
+        <button id="btn-notif-permission" class="kw-toggle">Erlauben</button>
+      </div>
+      <div class="notif-cat-list">
+        <label class="notif-cat"><input type="checkbox" id="notif-cat-preisfehler"> Neuer Preisfehler</label>
+        <label class="notif-cat"><input type="checkbox" id="notif-cat-discount"> Hoher Rabatt (≥80%)</label>
+        <label class="notif-cat"><input type="checkbox" id="notif-cat-keyword"> Keyword-Treffer</label>
+        <label class="notif-cat"><input type="checkbox" id="notif-cat-spike"> Temperatur-Spike</label>
       </div>
       <div class="setting-section-label">Keyword-Benachrichtigungen</div>
       <p class="settings-hint">Deals die eines dieser Wörter im Titel enthalten werden per Telegram benachrichtigt und farbig hervorgehoben.</p>
@@ -821,6 +838,7 @@
         </div>`;
     }).join('');
     grid.style.display = 'grid';
+    checkBrowserNotifications(deals);
     loadSyncStatus();
   }
 
@@ -981,6 +999,82 @@
     btnFastPollToggle.classList.toggle('on', s.enabled);
     btnFastPollToggle.textContent = s.enabled ? 'An' : 'Aus';
   });
+
+  // Browser notifications (in-tab only, category toggles persisted locally)
+  const NOTIF_CATS = ['preisfehler', 'discount', 'keyword', 'spike'];
+  let notifPrefs = { preisfehler: false, discount: false, keyword: false, spike: false };
+  try {
+    notifPrefs = { ...notifPrefs, ...JSON.parse(localStorage.getItem('notifCategories') || '{}') };
+  } catch {}
+
+  const notifCheckboxes = {
+    preisfehler: document.getElementById('notif-cat-preisfehler'),
+    discount: document.getElementById('notif-cat-discount'),
+    keyword: document.getElementById('notif-cat-keyword'),
+    spike: document.getElementById('notif-cat-spike'),
+  };
+  for (const key of NOTIF_CATS) {
+    notifCheckboxes[key].checked = notifPrefs[key];
+    notifCheckboxes[key].addEventListener('change', () => {
+      notifPrefs[key] = notifCheckboxes[key].checked;
+      localStorage.setItem('notifCategories', JSON.stringify(notifPrefs));
+    });
+  }
+
+  const btnNotifPermission = document.getElementById('btn-notif-permission');
+  const notifPermStatus = document.getElementById('notifPermStatus');
+
+  function updateNotifPermissionUI() {
+    if (!('Notification' in window)) {
+      notifPermStatus.textContent = 'Berechtigung: nicht unterstützt';
+      btnNotifPermission.style.display = 'none';
+      return;
+    }
+    const perm = Notification.permission;
+    const label = perm === 'granted' ? 'erlaubt' : perm === 'denied' ? 'blockiert (im Browser ändern)' : 'nicht erteilt';
+    notifPermStatus.textContent = `Berechtigung: ${label}`;
+    btnNotifPermission.style.display = perm === 'granted' ? 'none' : '';
+  }
+  updateNotifPermissionUI();
+
+  btnNotifPermission.addEventListener('click', async () => {
+    if (!('Notification' in window)) return;
+    await Notification.requestPermission();
+    updateNotifPermissionUI();
+  });
+
+  const _notifiedIds = { preisfehler: new Set(), discount: new Set(), keyword: new Set(), spike: new Set() };
+
+  function fireBrowserNotification(title, body, url) {
+    try {
+      const n = new Notification(title, { body });
+      n.onclick = () => { window.focus(); window.open(url, '_blank'); n.close(); };
+    } catch {}
+  }
+
+  function checkBrowserNotifications(deals) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    for (const d of deals) {
+      if (notifPrefs.preisfehler && d.source === 'preisfehler' && d.is_new_this_sync
+          && !_notifiedIds.preisfehler.has(d.thread_id)) {
+        _notifiedIds.preisfehler.add(d.thread_id);
+        fireBrowserNotification('🚨 Neuer Preisfehler', `${d.title} — ${d.price_fmt}`, d.url);
+      }
+      if (notifPrefs.discount && d.source === 'new' && d.is_new_this_sync && (d.discount_pct || 0) >= 80
+          && !_notifiedIds.discount.has(d.thread_id)) {
+        _notifiedIds.discount.add(d.thread_id);
+        fireBrowserNotification(`💥 -${d.discount_pct}% Rabatt`, `${d.title} — ${d.price_fmt}`, d.url);
+      }
+      if (notifPrefs.keyword && d.keyword_match && !_notifiedIds.keyword.has(d.thread_id)) {
+        _notifiedIds.keyword.add(d.thread_id);
+        fireBrowserNotification(`🔍 Keyword: "${d.keyword_match}"`, d.title, d.url);
+      }
+      if (notifPrefs.spike && d.is_spiking && !_notifiedIds.spike.has(d.thread_id)) {
+        _notifiedIds.spike.add(d.thread_id);
+        fireBrowserNotification('🔥 Deal heizt auf', `${d.title} — ${Math.round(d.temperature || 0)}°`, d.url);
+      }
+    }
+  }
 
   document.getElementById('btn-settings').addEventListener('click', async () => {
     const open = settingsPanel.style.display !== 'none';
