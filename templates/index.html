@@ -449,7 +449,12 @@
        (nowrap) and its items shrink+ellipsize instead of wrapping, so the
        whole thing is reliably exactly two lines. */
     .meta-row { display: flex; flex-wrap: nowrap; gap: 8px; min-width: 0; }
-    .meta-row span {
+    /* Direct children only — a descendant selector here would also catch
+       the nested .card-icon (and .expires-countdown) spans and make them
+       independently shrinkable, which squeezed icons down to nothing and
+       chopped the countdown text instead of just ellipsizing whichever
+       whole item doesn't fit. */
+    .meta-row > span {
       display: flex;
       align-items: center;
       gap: 3px;
@@ -462,7 +467,7 @@
 
     .card-icon { display: inline-flex; vertical-align: -2px; margin-right: 4px; flex-shrink: 0; }
     .card-icon svg { width: 12px; height: 12px; display: block; }
-    .meta-row span .card-icon { margin-right: 0; }
+    .meta-row > span .card-icon { margin-right: 0; }
 
     .shop-link {
       display: inline-block;
