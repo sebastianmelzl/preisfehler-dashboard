@@ -755,6 +755,7 @@
           <option value="bigben">🔔 Big Ben</option>
           <option value="dingdong">🔔 Ding-Dong</option>
           <option value="single">🔔 Einzelner Gong</option>
+          <option value="mp3">🎵 Nachrichtenton</option>
         </select>
       </div>
       <div class="notif-cat-row">
@@ -1311,11 +1312,16 @@
     bigben:   { notes: [659.25, 554.37, 587.33, 392.00], gap: 0.6, decay: 1.8 }, // Westminster opening
     dingdong: { notes: [659.25, 523.25], gap: 0.55, decay: 1.6 }, // E5-C5 doorbell
     single:   { notes: [196.00], gap: 0, decay: 3.0 }, // one low struck tone
+    mp3:      { file: '/static/sounds/light-hearted-message-tone.mp3' }, // real recorded sound
   };
 
   function playGong() {
     try {
       const pattern = GONG_SOUNDS[gongSoundSelect.value] || GONG_SOUNDS.nbc;
+      if (pattern.file) {
+        new Audio(pattern.file).play().catch(() => {});
+        return;
+      }
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
