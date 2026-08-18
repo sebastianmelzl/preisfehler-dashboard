@@ -741,6 +741,16 @@
       </div>
       <p class="settings-hint">„Dringend" heißt: die Benachrichtigung bleibt stehen, bis du sie wegklickst, statt automatisch zu verschwinden.</p>
       <button id="btn-notif-test" class="kw-toggle" style="align-self:flex-start">Test-Benachrichtigung senden</button>
+      <div class="setting-section-label">Gong &amp; Sprachansage</div>
+      <p class="settings-hint">Läuft unabhängig von der Browser-Berechtigung oben, einmalig pro neuem Preisfehler.</p>
+      <div class="notif-cat-row">
+        <label class="notif-cat"><input type="checkbox" id="gong-preisfehler"> Gong bei neuem Preisfehler</label>
+        <button id="btn-gong-test" class="kw-toggle">Testen</button>
+      </div>
+      <div class="notif-cat-row">
+        <label class="notif-cat"><input type="checkbox" id="voice-preisfehler"> Sprachansage bei neuem Preisfehler</label>
+        <button id="btn-voice-test" class="kw-toggle">Testen</button>
+      </div>
       <div class="setting-section-label">Keyword-Benachrichtigungen</div>
       <p class="settings-hint">Deals die eines dieser Wörter im Titel enthalten werden per Telegram benachrichtigt und farbig hervorgehoben.</p>
       <div class="kw-add-row">
@@ -910,6 +920,7 @@
     }).join('');
     grid.style.display = 'grid';
     checkBrowserNotifications(deals);
+    checkPreisfehlerAlerts(deals);
     loadSyncStatus();
   }
 
@@ -1228,6 +1239,99 @@
     btn.textContent = 'Gesendet!';
     setTimeout(() => { btn.textContent = original; }, 2000);
   });
+
+  // Gong + voice announcement for new preisfehler — independent of the
+  // Notification API/permission above, since these are just audio.
+  function loadSeenSet(key) {
+    try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch { return new Set(); }
+  }
+  function markSeen(set, key, threadId) {
+    set.add(threadId);
+    localStorage.setItem(key, JSON.stringify(Array.from(set)));
+  }
+
+  let gongEnabled = localStorage.getItem('gongPreisfehler') === 'true';
+  let voiceEnabled = localStorage.getItem('voicePreisfehler') === 'true';
+  let gongSeenIds = loadSeenSet('gongSeen_preisfehler');
+  let voiceSeenIds = loadSeenSet('voiceSeen_preisfehler');
+
+  const gongCheckbox = document.getElementById('gong-preisfehler');
+  gongCheckbox.checked = gongEnabled;
+  gongCheckbox.addEventListener('change', () => {
+    gongEnabled = gongCheckbox.checked;
+    localStorage.setItem('gongPreisfehler', gongEnabled);
+  });
+
+  const voiceCheckbox = document.getElementById('voice-preisfehler');
+  voiceCheckbox.checked = voiceEnabled;
+  voiceCheckbox.addEventListener('change', () => {
+    voiceEnabled = voiceCheckbox.checked;
+    localStorage.setItem('voicePreisfehler', voiceEnabled);
+  });
+
+  function playGong() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      const master = ctx.createGain();
+      master.gain.value = 0.35;
+      master.connect(ctx.destination);
+      const fundamental = 110;
+      const partials = [1, 1.48, 2.4, 3.2, 4.3]; // inharmonic ratios -> metallic gong-like tone
+      partials.forEach((ratio, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = fundamental * ratio;
+        const gain = ctx.createGain();
+        const peak = 0.8 / (i + 1);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(peak, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 3.5 + i * 0.3);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start(now);
+        osc.stop(now + 4.5);
+      });
+    } catch (e) {}
+  }
+
+  function fmtEuroSpoken(value) {
+    return value.toFixed(2).replace('.', ',').replace(',00', '');
+  }
+
+  function speakPreisfehler(d) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      let text = `Neuer Preisfehler: ${d.title}`;
+      if (d.price != null) text += ` für ${fmtEuroSpoken(d.price)} Euro`;
+      if (d.next_best && d.price != null && d.next_best > d.price) {
+        text += `. Du sparst ${fmtEuroSpoken(d.next_best - d.price)} Euro`;
+      }
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'de-DE';
+      speechSynthesis.speak(utter);
+    } catch (e) {}
+  }
+
+  document.getElementById('btn-gong-test').addEventListener('click', () => playGong());
+  document.getElementById('btn-voice-test').addEventListener('click', () => {
+    speakPreisfehler({ title: 'Test-Artikel', price: 19.99, next_best: 49.99 });
+  });
+
+  function checkPreisfehlerAlerts(deals) {
+    if (!gongEnabled && !voiceEnabled) return;
+    for (const d of deals) {
+      if (d.source !== 'preisfehler' || d.is_expired) continue;
+      if (gongEnabled && !gongSeenIds.has(d.thread_id)) {
+        markSeen(gongSeenIds, 'gongSeen_preisfehler', d.thread_id);
+        playGong();
+      }
+      if (voiceEnabled && !voiceSeenIds.has(d.thread_id)) {
+        markSeen(voiceSeenIds, 'voiceSeen_preisfehler', d.thread_id);
+        speakPreisfehler(d);
+      }
+    }
+  }
 
   function checkBrowserNotifications(deals) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
