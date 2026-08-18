@@ -694,6 +694,7 @@
         <label class="notif-cat"><input type="checkbox" id="notif-cat-spike"> Temperatur-Spike</label>
         <label class="notif-cat"><input type="checkbox" id="notif-cat-any"> 🧪 Jeder neue Deal (zum Testen)</label>
       </div>
+      <button id="btn-notif-test" class="kw-toggle" style="align-self:flex-start">Test-Benachrichtigung senden</button>
       <div class="setting-section-label">Keyword-Benachrichtigungen</div>
       <p class="settings-hint">Deals die eines dieser Wörter im Titel enthalten werden per Telegram benachrichtigt und farbig hervorgehoben.</p>
       <div class="kw-add-row">
@@ -1094,6 +1095,18 @@
       n.onclick = () => { window.focus(); window.open(url, '_blank'); n.close(); };
     } catch {}
   }
+
+  document.getElementById('btn-notif-test').addEventListener('click', () => {
+    const btn = document.getElementById('btn-notif-test');
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      updateNotifPermissionUI();
+      return;
+    }
+    fireBrowserNotification('🧪 Test-Benachrichtigung', 'Browser-Benachrichtigungen funktionieren!', window.location.href);
+    const original = btn.textContent;
+    btn.textContent = 'Gesendet!';
+    setTimeout(() => { btn.textContent = original; }, 2000);
+  });
 
   function checkBrowserNotifications(deals) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
