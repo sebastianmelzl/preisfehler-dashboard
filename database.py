@@ -65,7 +65,9 @@ def init_db():
                 temp_spike_notified  INTEGER DEFAULT 0,
                 temp_updated_at      INTEGER DEFAULT 0,
                 temp_rate            REAL    DEFAULT 0,
-                initial_temp         REAL    DEFAULT 0
+                initial_temp         REAL    DEFAULT 0,
+                availability_status      TEXT DEFAULT NULL,
+                availability_checked_at  INTEGER DEFAULT 0
             )
         """)
         conn.execute("""
@@ -120,6 +122,8 @@ def init_db():
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS consecutive_empty INTEGER DEFAULT 0",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_seq INTEGER DEFAULT 0",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS fast_poll_enabled INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS availability_status TEXT DEFAULT NULL",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS availability_checked_at INTEGER DEFAULT 0",
         ]:
             conn.execute(col_sql)
     logger.info("Database initialised")
@@ -260,6 +264,30 @@ def mark_expired(thread_id):
     with get_conn() as conn:
         conn.execute(
             "UPDATE deals SET is_expired=1, manually_expired=1 WHERE thread_id=%s", (thread_id,)
+        )
+
+
+def get_deals_needing_availability_check(max_age_seconds, limit=10):
+    """Active preisfehler deals with a shop link whose availability we
+    haven't checked recently — oldest checked (or never checked) first."""
+    cutoff = int(time.time()) - max_age_seconds
+    with get_conn() as conn:
+        rows = conn.execute(
+            """SELECT thread_id, shop_url FROM deals
+               WHERE source = 'preisfehler' AND is_expired = 0
+                 AND shop_url != '' AND availability_checked_at < %s
+               ORDER BY availability_checked_at ASC
+               LIMIT %s""",
+            (cutoff, limit),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_availability(thread_id, status):
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE deals SET availability_status=%s, availability_checked_at=%s WHERE thread_id=%s",
+            (status, int(time.time()), thread_id),
         )
 
 

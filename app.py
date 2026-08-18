@@ -132,6 +132,16 @@ def run_sync():
         except Exception as e:
             logger.warning("New deals fetch failed: %s", e)
 
+        # Availability check: re-verify a small batch of active preisfehler
+        # deals' shop links haven't gone dead since the last check
+        try:
+            due_checks = db.get_deals_needing_availability_check(max_age_seconds=900, limit=10)
+            for dd in due_checks:
+                status = scraper.check_availability(dd["shop_url"])
+                db.update_availability(dd["thread_id"], status)
+        except Exception as e:
+            logger.warning("Availability check failed: %s", e)
+
         db.set_sync_status(
             False,
             deals_found=len(normalised),
@@ -221,9 +231,23 @@ def api_deals():
     for d in raw:
         temp = d["temperature"] or 0
         is_spiking = d["thread_id"] in spiking_ids
+        hot_bar_width = scraper.hot_bar_width(temp, max_temp)
+        keyword_match = next((kw for kw in active_kws if kw in (d.get("title") or "").lower()), None)
+
+        # Priority score (0-100): how much this deal deserves attention right
+        # now, combining community validation (discount, temperature, the
+        # preisfehler tag itself), momentum (spiking), and personal relevance
+        # (keyword match) into one sortable number instead of ad-hoc tiers.
+        score = 0.0
+        score += min(d.get("discount_pct") or 0, 100) * 0.35
+        score += hot_bar_width * 0.25
+        score += 20 if d.get("source") == "preisfehler" else 0
+        score += 15 if is_spiking else 0
+        score += 10 if keyword_match else 0
+
         result.append({
             **d,
-            "hot_bar_width": scraper.hot_bar_width(temp, max_temp),
+            "hot_bar_width": hot_bar_width,
             "price_fmt": scraper.fmt_price(d["price"]),
             "next_best_fmt": scraper.fmt_price(d["next_best"]) if d["next_best"] else None,
             "published_fmt": (
@@ -231,8 +255,9 @@ def api_deals():
                 if d["published_at"] else "?"
             ),
             "is_new_this_sync": int(d.get("sync_seq") or 0) == current_seq and current_seq > 0,
-            "keyword_match": next((kw for kw in active_kws if kw in (d.get("title") or "").lower()), None),
+            "keyword_match": keyword_match,
             "is_spiking": is_spiking,
+            "score": min(round(score), 100),
         })
     return jsonify(result)
 
@@ -307,8 +332,17 @@ def api_expire_deal(thread_id):
 def api_telegram_test():
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
-    ok, msg = notifier.send_test(token, chat_id)
-    return jsonify({"ok": ok, "message": msg})
+    tg_ok, tg_msg = notifier.send_test(token, chat_id)
+
+    ntfy_topic = os.environ.get("NTFY_TOPIC", "")
+    ntfy_server = os.environ.get("NTFY_SERVER", "https://ntfy.sh")
+    ntfy_ok, ntfy_msg = notifier.send_test_ntfy(ntfy_topic, ntfy_server)
+
+    return jsonify({
+        "ok": tg_ok or ntfy_ok,
+        "telegram": {"ok": tg_ok, "message": tg_msg},
+        "ntfy": {"ok": ntfy_ok, "message": ntfy_msg},
+    })
 
 
 @app.route("/api/debug/new-deals")

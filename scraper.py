@@ -182,3 +182,33 @@ def hot_bar_width(temp, max_temp=1):
     if not temp or temp <= 0:
         return 0
     return min(100, round(math.log10(temp + 1) / math.log10(max(max_temp, temp) + 1) * 100))
+
+
+_AVAILABILITY_KEYWORDS = [
+    "ausverkauft", "nicht verfügbar", "nicht auf lager", "leider ausverkauft",
+    "derzeit nicht lieferbar", "nicht mehr verfügbar", "produkt nicht gefunden",
+    "out of stock", "sold out", "currently unavailable", "no longer available",
+]
+
+
+def check_availability(shop_url, timeout=10):
+    """Best-effort heuristic for whether a shop link still looks orderable.
+
+    Not a reliable stock check — shops render availability wildly
+    differently and this only looks at status code + a keyword scan, so
+    treat the result as a hint, not a fact. Returns 'available',
+    'unavailable', or 'unknown' (network error, timeout, no clear signal).
+    """
+    if not shop_url:
+        return "unknown"
+    try:
+        resp = requests.get(shop_url, headers=HEADERS, timeout=timeout, allow_redirects=True)
+        if resp.status_code >= 400:
+            return "unavailable"
+        html_lower = resp.text.lower()
+        if any(kw in html_lower for kw in _AVAILABILITY_KEYWORDS):
+            return "unavailable"
+        return "available"
+    except Exception as e:
+        logger.warning("Availability check failed for %s: %s", shop_url, e)
+        return "unknown"

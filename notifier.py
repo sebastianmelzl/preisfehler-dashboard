@@ -1,9 +1,12 @@
 import logging
 import os
+import re
 
 import requests
 
 logger = logging.getLogger(__name__)
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
 
 
 def _credentials():
@@ -12,7 +15,7 @@ def _credentials():
     return token, chat_id
 
 
-def _send(text):
+def _send_telegram(text):
     token, chat_id = _credentials()
     if not token or not chat_id:
         logger.warning("Telegram not configured – skipping notification")
@@ -29,6 +32,42 @@ def _send(text):
     except Exception as e:
         logger.error("Telegram error: %s", e)
         return False
+
+
+def _send_ntfy(text, url=None):
+    """Send to ntfy.sh (or a self-hosted server) as a backup channel.
+
+    Only ASCII goes in headers — ntfy metadata headers go through
+    requests/urllib3's latin-1 header encoding, and message text here can
+    contain arbitrary unicode (umlauts, emoji), so title stays static and
+    the actual content goes in the UTF-8 body instead.
+    """
+    topic = os.environ.get("NTFY_TOPIC", "")
+    if not topic:
+        return False
+    server = os.environ.get("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
+    try:
+        headers = {"Title": "Preisfehler Dashboard"}
+        if url:
+            headers["Click"] = url
+        resp = requests.post(
+            f"{server}/{topic}",
+            data=_HTML_TAG_RE.sub("", text).encode("utf-8"),
+            headers=headers,
+            timeout=10,
+        )
+        resp.raise_for_status()
+        logger.info("ntfy notification sent")
+        return True
+    except Exception as e:
+        logger.error("ntfy error: %s", e)
+        return False
+
+
+def _send(text, url=None):
+    telegram_ok = _send_telegram(text)
+    ntfy_ok = _send_ntfy(text, url=url)
+    return telegram_ok or ntfy_ok
 
 
 def notify_new_deals(deals):
@@ -60,7 +99,7 @@ def notify_new_deals(deals):
             f"{status}\n\n"
             f"🔗 <a href='{url}'>Deal ansehen</a>"
         )
-        _send(text)
+        _send(text, url=url)
 
 
 def notify_high_discount_deals(deals):
@@ -89,7 +128,7 @@ def notify_high_discount_deals(deals):
             f"🌡 {temp:.0f}°\n\n"
             f"🔗 <a href='{shop_url}'>Zum Shop</a>  |  <a href='{url}'>mydealz</a>"
         )
-        _send(text)
+        _send(text, url=url)
 
 
 def notify_keyword_matches(deals):
@@ -118,7 +157,7 @@ def notify_keyword_matches(deals):
             f"🏪 {merchant}\n\n"
             f"🔗 <a href='{shop_url}'>Zum Shop</a>  |  <a href='{url}'>mydealz</a>"
         )
-        _send(text)
+        _send(text, url=url)
 
 
 def notify_temperature_spike(deals):
@@ -145,7 +184,7 @@ def notify_temperature_spike(deals):
             f"🏪 {merchant}\n\n"
             f"🔗 <a href='{shop_url}'>Zum Shop</a>  |  <a href='{url}'>mydealz</a>"
         )
-        _send(text)
+        _send(text, url=url)
 
 
 def notify_scraper_warning(consecutive):
@@ -166,6 +205,22 @@ def send_test(token, chat_id):
                 "text": "✅ <b>Preisfehler Dashboard</b> – Verbindung erfolgreich!",
                 "parse_mode": "HTML",
             },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return True, "OK"
+    except Exception as e:
+        return False, str(e)
+
+
+def send_test_ntfy(topic, server):
+    if not topic:
+        return False, "Kein NTFY_TOPIC konfiguriert"
+    try:
+        resp = requests.post(
+            f"{server.rstrip('/')}/{topic}",
+            data="Preisfehler Dashboard - Verbindung erfolgreich!".encode("utf-8"),
+            headers={"Title": "Preisfehler Dashboard"},
             timeout=10,
         )
         resp.raise_for_status()
