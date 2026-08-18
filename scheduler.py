@@ -6,6 +6,8 @@ from zoneinfo import ZoneInfo
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
 
+import database as db
+
 logger = logging.getLogger(__name__)
 
 BERLIN = ZoneInfo("Europe/Berlin")
@@ -19,10 +21,18 @@ def _is_night():
     return now.hour < 6 or (now.hour == 23 and now.minute >= 59)
 
 
+def _fast_poll_enabled():
+    try:
+        return db.get_fast_poll_enabled()
+    except Exception:
+        return False
+
+
 def _next_delay_seconds():
+    fast = _fast_poll_enabled()
     if _is_night():
-        return 3600
-    return random.randint(30, 240)
+        return 300 if fast else 3600
+    return 60 if fast else random.randint(30, 240)
 
 
 def _run_and_reschedule():
@@ -41,8 +51,8 @@ def _schedule_next():
         id="auto_sync",
         replace_existing=True,
     )
-    mode = "stündlich (Nacht)" if _is_night() else f"in {delay}s"
-    logger.info("Next sync scheduled %s", mode)
+    tag = "fast" if _fast_poll_enabled() else "normal"
+    logger.info("Next sync (%s) scheduled in %ss", tag, delay)
 
 
 def start(sync_fn):
