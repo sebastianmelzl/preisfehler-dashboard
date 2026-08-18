@@ -536,9 +536,21 @@
     }
 
     .notif-perm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .notif-cat-list { display: flex; flex-direction: column; gap: 6px; }
+    .notif-cat-list { display: flex; flex-direction: column; gap: 8px; }
+    .notif-cat-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .notif-cat { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer; }
     .notif-cat input { accent-color: var(--spinner-head); cursor: pointer; }
+    .notif-urgent {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.7rem;
+      color: var(--text-faint);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .notif-urgent input { accent-color: #f97316; cursor: pointer; }
 
     .kw-add-row { display: flex; gap: 8px; }
     .kw-add-row input {
@@ -688,12 +700,28 @@
         <button id="btn-notif-permission" class="kw-toggle">Erlauben</button>
       </div>
       <div class="notif-cat-list">
-        <label class="notif-cat"><input type="checkbox" id="notif-cat-preisfehler"> Neuer Preisfehler <span class="settings-hint" style="display:inline">(bleibt stehen)</span></label>
-        <label class="notif-cat"><input type="checkbox" id="notif-cat-discount"> Hoher Rabatt (≥80%)</label>
-        <label class="notif-cat"><input type="checkbox" id="notif-cat-keyword"> Keyword-Treffer</label>
-        <label class="notif-cat"><input type="checkbox" id="notif-cat-spike"> Temperatur-Spike</label>
-        <label class="notif-cat"><input type="checkbox" id="notif-cat-any"> 🧪 Jeder neue Deal (zum Testen)</label>
+        <div class="notif-cat-row">
+          <label class="notif-cat"><input type="checkbox" id="notif-cat-preisfehler"> Neuer Preisfehler</label>
+          <label class="notif-urgent"><input type="checkbox" id="notif-urgent-preisfehler"> Dringend</label>
+        </div>
+        <div class="notif-cat-row">
+          <label class="notif-cat"><input type="checkbox" id="notif-cat-discount"> Hoher Rabatt (≥80%)</label>
+          <label class="notif-urgent"><input type="checkbox" id="notif-urgent-discount"> Dringend</label>
+        </div>
+        <div class="notif-cat-row">
+          <label class="notif-cat"><input type="checkbox" id="notif-cat-keyword"> Keyword-Treffer</label>
+          <label class="notif-urgent"><input type="checkbox" id="notif-urgent-keyword"> Dringend</label>
+        </div>
+        <div class="notif-cat-row">
+          <label class="notif-cat"><input type="checkbox" id="notif-cat-spike"> Temperatur-Spike</label>
+          <label class="notif-urgent"><input type="checkbox" id="notif-urgent-spike"> Dringend</label>
+        </div>
+        <div class="notif-cat-row">
+          <label class="notif-cat"><input type="checkbox" id="notif-cat-any"> 🧪 Jeder neue Deal (zum Testen)</label>
+          <label class="notif-urgent"><input type="checkbox" id="notif-urgent-any"> Dringend</label>
+        </div>
       </div>
+      <p class="settings-hint">„Dringend" heißt: die Benachrichtigung bleibt stehen, bis du sie wegklickst, statt automatisch zu verschwinden.</p>
       <button id="btn-notif-test" class="kw-toggle" style="align-self:flex-start">Test-Benachrichtigung senden</button>
       <div class="setting-section-label">Keyword-Benachrichtigungen</div>
       <p class="settings-hint">Deals die eines dieser Wörter im Titel enthalten werden per Telegram benachrichtigt und farbig hervorgehoben.</p>
@@ -1046,6 +1074,26 @@
     });
   }
 
+  let notifUrgent = { preisfehler: true, discount: false, keyword: false, spike: false, any: false };
+  try {
+    notifUrgent = { ...notifUrgent, ...JSON.parse(localStorage.getItem('notifUrgentCategories') || '{}') };
+  } catch {}
+
+  const notifUrgentCheckboxes = {
+    preisfehler: document.getElementById('notif-urgent-preisfehler'),
+    discount: document.getElementById('notif-urgent-discount'),
+    keyword: document.getElementById('notif-urgent-keyword'),
+    spike: document.getElementById('notif-urgent-spike'),
+    any: document.getElementById('notif-urgent-any'),
+  };
+  for (const key of NOTIF_CATS) {
+    notifUrgentCheckboxes[key].checked = notifUrgent[key];
+    notifUrgentCheckboxes[key].addEventListener('change', () => {
+      notifUrgent[key] = notifUrgentCheckboxes[key].checked;
+      localStorage.setItem('notifUrgentCategories', JSON.stringify(notifUrgent));
+    });
+  }
+
   const btnNotifPermission = document.getElementById('btn-notif-permission');
   const notifPermStatus = document.getElementById('notifPermStatus');
 
@@ -1114,24 +1162,24 @@
       if (notifPrefs.preisfehler && d.source === 'preisfehler' && d.is_new_this_sync
           && !_notifiedIds.preisfehler.has(d.thread_id)) {
         _notifiedIds.preisfehler.add(d.thread_id);
-        fireBrowserNotification('🚨 Neuer Preisfehler', `${d.title} — ${d.price_fmt}`, d.url, true);
+        fireBrowserNotification('🚨 Neuer Preisfehler', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.preisfehler);
       }
       if (notifPrefs.discount && d.source === 'new' && d.is_new_this_sync && (d.discount_pct || 0) >= 80
           && !_notifiedIds.discount.has(d.thread_id)) {
         _notifiedIds.discount.add(d.thread_id);
-        fireBrowserNotification(`💥 -${d.discount_pct}% Rabatt`, `${d.title} — ${d.price_fmt}`, d.url);
+        fireBrowserNotification(`💥 -${d.discount_pct}% Rabatt`, `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.discount);
       }
       if (notifPrefs.keyword && d.keyword_match && !_notifiedIds.keyword.has(d.thread_id)) {
         _notifiedIds.keyword.add(d.thread_id);
-        fireBrowserNotification(`🔍 Keyword: "${d.keyword_match}"`, d.title, d.url);
+        fireBrowserNotification(`🔍 Keyword: "${d.keyword_match}"`, d.title, d.url, notifUrgent.keyword);
       }
       if (notifPrefs.spike && d.is_spiking && !_notifiedIds.spike.has(d.thread_id)) {
         _notifiedIds.spike.add(d.thread_id);
-        fireBrowserNotification('🔥 Deal heizt auf', `${d.title} — ${Math.round(d.temperature || 0)}°`, d.url);
+        fireBrowserNotification('🔥 Deal heizt auf', `${d.title} — ${Math.round(d.temperature || 0)}°`, d.url, notifUrgent.spike);
       }
       if (notifPrefs.any && d.is_new_this_sync && !_notifiedIds.any.has(d.thread_id)) {
         _notifiedIds.any.add(d.thread_id);
-        fireBrowserNotification('🧪 Neuer Deal (Test)', `${d.title} — ${d.price_fmt}`, d.url);
+        fireBrowserNotification('🧪 Neuer Deal (Test)', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.any);
       }
     }
   }
