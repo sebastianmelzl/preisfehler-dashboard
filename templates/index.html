@@ -1163,7 +1163,10 @@
       updateNotifPermissionUI();
       return;
     }
-    fireBrowserNotification('🧪 Test-Benachrichtigung', 'Browser-Benachrichtigungen funktionieren!', window.location.href);
+    fireBrowserNotification('🧪 Test: Normal', 'Sollte automatisch verschwinden.', window.location.href, false);
+    setTimeout(() => {
+      fireBrowserNotification('🧪 Test: Dringend', 'Sollte stehen bleiben, bis du sie wegklickst.', window.location.href, true);
+    }, 500);
     const original = btn.textContent;
     btn.textContent = 'Gesendet!';
     setTimeout(() => { btn.textContent = original; }, 2000);
