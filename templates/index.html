@@ -1092,8 +1092,7 @@
           </div>
           <div class="meta-row">
             <span><span class="card-icon">${ICON_COMMENT}</span>${d.comment_count || 0}</span>
-            ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at)}</span>` : ''}
-            ${expiresAt ? `<span class="expires-label"><span class="card-icon">${ICON_HOURGLASS}</span><span class="expires-countdown"></span></span>` : ''}
+            ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at, expiresAt)}</span>` : ''}
           </div>
         </div>
         ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener"><span class="card-icon">${ICON_EXTERNAL_LINK}</span>${esc(d.link_host)}</a>` : ''}
@@ -1794,30 +1793,35 @@
     return `vor ${Math.floor(secs / 3600)} Std`;
   }
 
-  function postedAgoHtml(publishedAt) {
+  function postedAgoHtml(publishedAt, expiresAtMs) {
     const secs = Math.round((Date.now() - publishedAt * 1000) / 1000);
-    return `<span class="card-icon">${ICON_CLOCK}</span>` + fmtAgo(secs);
+    let html = `<span class="card-icon">${ICON_CLOCK}</span>` + fmtAgo(secs);
+    if (expiresAtMs) {
+      const expSecs = Math.round((expiresAtMs - Date.now()) / 1000);
+      if (expSecs > 0) {
+        const mins = Math.max(1, Math.round(expSecs / 60));
+        html += ` <span class="expires-label">(Verschwindet in ${mins} Minute${mins === 1 ? '' : 'n'})</span>`;
+      }
+    }
+    return html;
   }
 
-  // Per-card expiry countdown + posted-ago timer
+  // Per-card expiry countdown + posted-ago timer — combined into one
+  // "vor X Min (Verschwindet in Y Minuten)" line under the clock icon
+  // instead of a separate hourglass item.
   setInterval(() => {
     const now = Date.now();
     document.querySelectorAll('.posted-ago[data-published]').forEach(el => {
-      el.innerHTML = postedAgoHtml(parseInt(el.dataset.published));
+      const cardEl = el.closest('.card');
+      const exp = cardEl && cardEl.dataset.expires ? parseInt(cardEl.dataset.expires) : null;
+      el.innerHTML = postedAgoHtml(parseInt(el.dataset.published), exp);
     });
     document.querySelectorAll('.card[data-expires]').forEach(card => {
       const exp = parseInt(card.dataset.expires);
       const secs = Math.round((exp - now) / 1000);
-      const label = card.querySelector('.expires-countdown');
-      if (secs <= 0) {
-        if (!card.classList.contains('fading-out')) {
-          card.classList.add('fading-out');
-          setTimeout(() => card.remove(), 800);
-        }
-      } else if (label) {
-        const m = Math.floor(secs / 60);
-        const s = secs % 60;
-        label.textContent = `verschwindet in ${m}:${String(s).padStart(2, '0')}`;
+      if (secs <= 0 && !card.classList.contains('fading-out')) {
+        card.classList.add('fading-out');
+        setTimeout(() => card.remove(), 800);
       }
     });
   }, 1000);
