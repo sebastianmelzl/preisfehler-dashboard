@@ -1031,14 +1031,25 @@
       return;
     }
     const perm = Notification.permission;
-    const label = perm === 'granted' ? 'erlaubt' : perm === 'denied' ? 'blockiert (im Browser ändern)' : 'nicht erteilt';
+    if (perm === 'denied') {
+      // Browsers never re-show the permission dialog once denied — a
+      // clickable "Erlauben" button here would silently do nothing on
+      // click, which looks like a bug. Explain instead of offering a
+      // dead button.
+      notifPermStatus.innerHTML = 'Blockiert — im Browser über das Symbol links neben der Adressleiste (Website-Einstellungen) manuell erlauben.';
+      notifPermStatus.style.color = '#f97316';
+      btnNotifPermission.style.display = 'none';
+      return;
+    }
+    const label = perm === 'granted' ? 'erlaubt' : 'nicht erteilt';
     notifPermStatus.textContent = `Berechtigung: ${label}`;
+    notifPermStatus.style.color = '';
     btnNotifPermission.style.display = perm === 'granted' ? 'none' : '';
   }
   updateNotifPermissionUI();
 
   btnNotifPermission.addEventListener('click', async () => {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window) || Notification.permission === 'denied') return;
     await Notification.requestPermission();
     updateNotifPermissionUI();
   });
