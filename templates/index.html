@@ -1171,28 +1171,38 @@
 
   function checkBrowserNotifications(deals) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    // Firing several Notifications synchronously in the same tick is
+    // unreliable — macOS Notification Center in particular tends to group
+    // or drop all but the most recent one instead of showing each as its
+    // own banner. Stagger them slightly so each gets its own moment.
+    let delay = 0;
+    const STAGGER_MS = 400;
+    const queue = (title, body, url, urgent) => {
+      setTimeout(() => fireBrowserNotification(title, body, url, urgent), delay);
+      delay += STAGGER_MS;
+    };
     for (const d of deals) {
       if (notifPrefs.preisfehler && d.source === 'preisfehler' && !d.is_expired
           && !_notifiedIds.preisfehler.has(d.thread_id)) {
         _notifiedIds.preisfehler.add(d.thread_id);
-        fireBrowserNotification('🚨 Neuer Preisfehler', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.preisfehler);
+        queue('🚨 Neuer Preisfehler', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.preisfehler);
       }
       if (notifPrefs.discount && d.source === 'new' && !d.is_expired && (d.discount_pct || 0) >= 80
           && !_notifiedIds.discount.has(d.thread_id)) {
         _notifiedIds.discount.add(d.thread_id);
-        fireBrowserNotification(`💥 -${d.discount_pct}% Rabatt`, `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.discount);
+        queue(`💥 -${d.discount_pct}% Rabatt`, `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.discount);
       }
       if (notifPrefs.keyword && d.keyword_match && !d.is_expired && !_notifiedIds.keyword.has(d.thread_id)) {
         _notifiedIds.keyword.add(d.thread_id);
-        fireBrowserNotification(`🔍 Keyword: "${d.keyword_match}"`, d.title, d.url, notifUrgent.keyword);
+        queue(`🔍 Keyword: "${d.keyword_match}"`, d.title, d.url, notifUrgent.keyword);
       }
       if (notifPrefs.spike && d.is_spiking && !d.is_expired && !_notifiedIds.spike.has(d.thread_id)) {
         _notifiedIds.spike.add(d.thread_id);
-        fireBrowserNotification('🔥 Deal heizt auf', `${d.title} — ${Math.round(d.temperature || 0)}°`, d.url, notifUrgent.spike);
+        queue('🔥 Deal heizt auf', `${d.title} — ${Math.round(d.temperature || 0)}°`, d.url, notifUrgent.spike);
       }
       if (notifPrefs.any && !d.is_expired && !_notifiedIds.any.has(d.thread_id)) {
         _notifiedIds.any.add(d.thread_id);
-        fireBrowserNotification('🧪 Neuer Deal (Test)', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.any);
+        queue('🧪 Neuer Deal (Test)', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.any);
       }
     }
   }
