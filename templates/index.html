@@ -759,6 +759,32 @@
       margin-bottom: 4px;
     }
 
+    .updated-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: #1e3a5f66;
+      color: var(--link-hover);
+      border: 1px solid #3b82f655;
+      border-radius: 5px;
+      padding: 1px 6px;
+      margin-bottom: 4px;
+    }
+    @keyframes updatePulse {
+      0% { box-shadow: 0 0 0 2px #3b82f6aa, 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45); }
+      100% { box-shadow: 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45); }
+    }
+    body.light .card.card-updated { animation-name: updatePulseLight; }
+    @keyframes updatePulseLight {
+      0% { box-shadow: 0 0 0 2px #2563eb99, 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18); }
+      100% { box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18); }
+    }
+    .card.card-updated { animation: updatePulse 1.4s ease; }
+    @media (prefers-reduced-motion: reduce) {
+      .card.card-updated { animation: none; }
+    }
+
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
@@ -951,6 +977,7 @@
   let showNewDeals = true;
 
   const ICON_ZAP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+  const ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
   const ICON_FLAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>';
   const ICON_ALERT_TRIANGLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
   const ICON_TRENDING_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
@@ -980,7 +1007,17 @@
   let hasRenderedOnce = false;
   const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  function buildCardHtml(d) {
+  // Tracks the last-seen field values per deal so we can tell "this card's
+  // data actually changed" apart from "this card just moved/re-rendered
+  // unchanged" — only the former gets the Aktualisiert marker.
+  let previousDealsById = new Map();
+  const WATCHED_FIELDS = ['price', 'temperature', 'discount_pct', 'is_expired', 'is_hot', 'availability_status', 'next_best'];
+  function dealChanged(oldD, newD) {
+    if (!oldD) return false;
+    return WATCHED_FIELDS.some(f => oldD[f] !== newD[f]);
+  }
+
+  function buildCardHtml(d, wasUpdated) {
     const expired = d.is_expired;
     const hot = d.is_hot;
     const isNew = d.source === 'new';
@@ -1011,8 +1048,9 @@
       : null;
 
     return `
-      <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}" data-thread-id="${d.thread_id}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
+      <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}${wasUpdated ? ' card-updated' : ''}" data-thread-id="${d.thread_id}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
         <div class="preisfehler-label"><span class="card-icon">${ICON_ALERT_TRIANGLE}</span>Preisfehler</div>
+        ${wasUpdated ? `<span class="updated-badge"><span class="card-icon">${ICON_REFRESH}</span>Aktualisiert</span>` : ''}
         ${d.is_spiking ? `<span class="spike-badge"><span class="card-icon">${ICON_TRENDING_UP}</span>heizt auf</span>` : ''}
         ${d.keyword_match ? `<span class="keyword-badge"><span class="card-icon">${ICON_SEARCH}</span>${esc(d.keyword_match)}</span>` : ''}
         ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
@@ -1072,8 +1110,9 @@
     let newIdx = 0;
     deals.forEach(d => {
       const id = String(d.thread_id);
-      const el = cardElementFromHtml(buildCardHtml(d));
       const isNewCard = !oldRects.has(id);
+      const wasUpdated = !isNewCard && dealChanged(previousDealsById.get(id), d);
+      const el = cardElementFromHtml(buildCardHtml(d, wasUpdated));
       if (isNewCard) {
         el.classList.add('card-entering');
         const delay = hasRenderedOnce ? Math.min(newIdx, 8) * 45 : Math.min(newIdx, 12) * 35;
@@ -1089,6 +1128,7 @@
     grid.appendChild(fragment);
     grid.style.display = 'grid';
     hasRenderedOnce = true;
+    previousDealsById = new Map(deals.map(d => [String(d.thread_id), d]));
 
     // "Invert" + "Play": cards that existed before get an inverse transform
     // applied immediately (so they visually stay put), then animate that
