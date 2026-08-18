@@ -164,6 +164,46 @@ def deal_url(t):
     return f"https://www.mydealz.de/deals/{t['titleSlug']}-{t['threadId']}"
 
 
+def has_thread_update(url, timeout=10):
+    """Checks the thread detail page for mydealz's own "Aktualisiert vor …"
+    label. That label comes from a non-empty threadUpdates array embedded in
+    the page — the list/search API always returns threadUpdates as [], so
+    this can only be answered by fetching the thread page itself."""
+    try:
+        sess = _get_session()
+        resp = sess.get(url, headers={"Accept": "text/html"}, timeout=timeout)
+        html_src = resp.text
+        marker = '"threadUpdates":['
+        idx = html_src.find(marker)
+        if idx == -1:
+            return False
+        start = idx + len(marker) - 1  # include the opening '['
+        depth = in_str = esc = 0
+        end = start
+        for i, c in enumerate(html_src[start:], start):
+            if esc:
+                esc = False
+                continue
+            if c == "\\":
+                esc = True
+                continue
+            if c == '"':
+                in_str = not in_str
+            if not in_str:
+                if c == "[":
+                    depth += 1
+                elif c == "]":
+                    depth -= 1
+                    if depth == 0:
+                        end = i + 1
+                        break
+        updates = json.loads(html_src[start:end])
+        return any(not u.get("isDeleted") for u in updates)
+    except Exception:
+        logger.warning("has_thread_update failed for %s", url, exc_info=True)
+        return False
+
+
 def discount_pct(price, next_best):
     if next_best and next_best > 0 and price is not None and price < next_best:
         return round((next_best - price) / next_best * 100)

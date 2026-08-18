@@ -96,6 +96,16 @@ def run_sync():
         normalised = [_normalise(t) for t in deals_raw]
         new_ids, _ = db.upsert_deals(normalised, source="preisfehler", sync_seq=current_seq)
 
+        # Only genuinely-new deals can be "actually an old edited deal in
+        # disguise" — check mydealz's own "Aktualisiert vor …" label on the
+        # thread page (not available in the list API) for those only, to
+        # keep the extra per-sync HTTP calls bounded.
+        by_id = {d["thread_id"]: d for d in normalised}
+        for tid in new_ids:
+            d = by_id.get(tid)
+            if d and scraper.has_thread_update(d["url"]):
+                db.mark_edited(tid)
+
         if normalised:
             db.reset_empty_sync()
         else:

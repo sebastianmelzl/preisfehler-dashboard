@@ -68,7 +68,8 @@ def init_db():
                 initial_temp         REAL    DEFAULT 0,
                 availability_status      TEXT DEFAULT NULL,
                 availability_checked_at  INTEGER DEFAULT 0,
-                updated_at               INTEGER DEFAULT 0
+                updated_at               INTEGER DEFAULT 0,
+                is_edited                INTEGER DEFAULT 0
             )
         """)
         conn.execute("""
@@ -126,6 +127,7 @@ def init_db():
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS availability_status TEXT DEFAULT NULL",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS availability_checked_at INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS updated_at INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS is_edited INTEGER DEFAULT 0",
         ]:
             conn.execute(col_sql)
     logger.info("Database initialised")
@@ -268,6 +270,11 @@ def mark_expired(thread_id):
         conn.execute(
             "UPDATE deals SET is_expired=1, manually_expired=1 WHERE thread_id=%s", (thread_id,)
         )
+
+
+def mark_edited(thread_id):
+    with get_conn() as conn:
+        conn.execute("UPDATE deals SET is_edited=1 WHERE thread_id=%s", (thread_id,))
 
 
 def get_deals_needing_availability_check(max_age_seconds, limit=10):

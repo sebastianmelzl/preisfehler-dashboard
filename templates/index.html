@@ -994,17 +994,6 @@
   let hasRenderedOnce = false;
   const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // mydealz tracks its own publishedAt vs updatedAt per thread — a gap of
-  // more than 30 min between them means the OP edited the post after
-  // publishing (price/title/etc.), not just normal moderation delay
-  // (observed: trivial edits sit in the 100-800s range, real edits are
-  // in the hours-to-days range). Only relevant for cards new to us — a
-  // deal we already know about doesn't need re-flagging every render.
-  const EDIT_GAP_THRESHOLD = 1800;
-  function wasEditedOnMydealz(d) {
-    return !!(d.updated_at && d.published_at && (d.updated_at - d.published_at) > EDIT_GAP_THRESHOLD);
-  }
-
   function buildCardHtml(d, editedBadge) {
     const expired = d.is_expired;
     const hot = d.is_hot;
@@ -1038,7 +1027,7 @@
     return `
       <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}" data-thread-id="${d.thread_id}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
         <div class="preisfehler-label"><span class="card-icon">${ICON_ALERT_TRIANGLE}</span>Preisfehler</div>
-        ${editedBadge ? `<span class="updated-badge" title="mydealz zeigt eine deutliche Lücke zwischen Veröffentlichung und letzter Bearbeitung"><span class="card-icon">${ICON_REFRESH}</span>Bearbeiteter Deal</span>` : ''}
+        ${editedBadge ? `<span class="updated-badge" title="mydealz zeigt auf der Dealseite einen 'Aktualisiert vor …'-Hinweis für diesen Deal"><span class="card-icon">${ICON_REFRESH}</span>Bearbeiteter Deal</span>` : ''}
         ${d.is_spiking ? `<span class="spike-badge"><span class="card-icon">${ICON_TRENDING_UP}</span>heizt auf</span>` : ''}
         ${d.keyword_match ? `<span class="keyword-badge"><span class="card-icon">${ICON_SEARCH}</span>${esc(d.keyword_match)}</span>` : ''}
         ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
@@ -1099,7 +1088,7 @@
     deals.forEach(d => {
       const id = String(d.thread_id);
       const isNewCard = !oldRects.has(id);
-      const editedBadge = isNewCard && wasEditedOnMydealz(d);
+      const editedBadge = !!d.is_edited;
       const el = cardElementFromHtml(buildCardHtml(d, editedBadge));
       if (isNewCard) {
         el.classList.add('card-entering');
