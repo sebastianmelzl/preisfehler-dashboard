@@ -439,14 +439,19 @@
       font-size: 0.76rem;
       color: var(--text-faint);
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      flex-direction: column;
+      gap: 4px;
     }
-    .meta span { display: flex; align-items: center; gap: 3px; }
+    /* Two fixed rows instead of one big flex-wrap list — which item wraps
+       to a second line used to depend on how long the merchant/category
+       text for that particular card happened to be, so it looked
+       inconsistent from card to card. */
+    .meta-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .meta-row span { display: flex; align-items: center; gap: 3px; }
 
     .card-icon { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
     .card-icon svg { width: 12px; height: 12px; display: block; }
-    .meta span .card-icon { margin-right: 0; }
+    .meta-row span .card-icon { margin-right: 0; }
 
     .shop-link {
       display: inline-block;
@@ -1064,12 +1069,16 @@
           ${origPrice}${disc}
         </div>
         <div class="meta">
-          <span><span class="card-icon">${ICON_SHOPPING_BAG}</span>${esc(d.merchant)}</span>
-          <span><span class="card-icon">${ICON_TAG}</span>${esc(d.category || '–')}</span>
-          <span><span class="card-icon">${ICON_CALENDAR}</span>${d.published_fmt}</span>
-          <span><span class="card-icon">${ICON_COMMENT}</span>${d.comment_count || 0}</span>
-          ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at)}</span>` : ''}
-          ${expiresAt ? `<span class="expires-label"><span class="card-icon">${ICON_HOURGLASS}</span><span class="expires-countdown"></span></span>` : ''}
+          <div class="meta-row">
+            <span><span class="card-icon">${ICON_SHOPPING_BAG}</span>${esc(d.merchant)}</span>
+            <span><span class="card-icon">${ICON_TAG}</span>${esc(d.category || '–')}</span>
+            <span><span class="card-icon">${ICON_CALENDAR}</span>${d.published_fmt}</span>
+          </div>
+          <div class="meta-row">
+            <span><span class="card-icon">${ICON_COMMENT}</span>${d.comment_count || 0}</span>
+            ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at)}</span>` : ''}
+            ${expiresAt ? `<span class="expires-label"><span class="card-icon">${ICON_HOURGLASS}</span><span class="expires-countdown"></span></span>` : ''}
+          </div>
         </div>
         ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener"><span class="card-icon">${ICON_EXTERNAL_LINK}</span>${esc(d.link_host)}</a>` : ''}
         <div class="hot-bar-wrap">
