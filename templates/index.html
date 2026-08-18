@@ -224,13 +224,16 @@
       gap: 10px;
       box-shadow: 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45);
       transition: border-color 0.2s, background 0.2s, box-shadow 0.25s, transform 0.25s;
-      animation: cardIn 0.35s ease both;
     }
     body.light .card {
       box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18);
     }
+    /* Only genuinely new cards fade+scale in — cards that just moved to a
+       new grid position are animated via a JS-driven FLIP transform
+       instead, so they slide rather than flicker back in. */
+    .card.card-entering { animation: cardIn 0.35s ease both; }
     @media (prefers-reduced-motion: reduce) {
-      .card { animation: none; }
+      .card.card-entering { animation: none; }
     }
     .card:hover {
       border-color: var(--border-hover);
@@ -989,12 +992,83 @@
   }
 
   let hasRenderedOnce = false;
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function buildCardHtml(d) {
+    const expired = d.is_expired;
+    const hot = d.is_hot;
+    const isNew = d.source === 'new';
+    const badge = expired
+      ? '<span class="badge badge-expired">Abgelaufen</span>'
+      : d.is_new_this_sync
+        ? `<span class="badge badge-new"><span class="card-icon">${ICON_ZAP}</span>Neu</span>`
+        : hot
+          ? `<span class="badge badge-hot"><span class="card-icon">${ICON_FLAME}</span>Hot</span>`
+          : '<span class="badge badge-active">Aktiv</span>';
+    const score = d.score || 0;
+    const scoreTier = score >= 70 ? 'high' : score >= 40 ? 'mid' : 'low';
+    const scoreBadge = `<span class="score-badge score-${scoreTier}" title="Prioritäts-Score">${score}</span>`;
+
+    let availBadge = '';
+    if (!isNew && !expired && d.availability_status === 'unavailable') {
+      availBadge = `<span class="avail-badge avail-unavailable" title="Shop-Seite wirkt evtl. ausverkauft/entfernt"><span class="card-icon" style="margin-right:0">${ICON_ALERT}</span></span>`;
+    } else if (!isNew && !expired && d.availability_status === 'available') {
+      availBadge = `<span class="avail-badge avail-available" title="Shop-Seite wirkt noch verfügbar"><span class="card-icon" style="margin-right:0">${ICON_CHECK}</span></span>`;
+    }
+
+    const origPrice = d.next_best_fmt
+      ? `<span class="price-orig">${d.next_best_fmt}</span>` : '';
+    const disc = d.discount_pct
+      ? `<span class="discount">-${d.discount_pct}%</span>` : '';
+
+    const barWidth = d.hot_bar_width || 0;
+    // Hot 'new' deals get a longer display window (1h) than regular new
+    // deals (40 min), but still auto-fade on a timer either way.
+    const expiresAt = isNew && d.published_at
+      ? d.published_at * 1000 + (hot ? 3600000 : 2400000)
+      : null;
+
+    return `
+      <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}" data-thread-id="${d.thread_id}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
+        <div class="preisfehler-label"><span class="card-icon">${ICON_ALERT_TRIANGLE}</span>Preisfehler</div>
+        ${d.is_spiking ? `<span class="spike-badge"><span class="card-icon">${ICON_TRENDING_UP}</span>heizt auf</span>` : ''}
+        ${d.keyword_match ? `<span class="keyword-badge"><span class="card-icon">${ICON_SEARCH}</span>${esc(d.keyword_match)}</span>` : ''}
+        ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
+        <div class="card-top">
+          <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
+          <div class="badge-group">${availBadge}${scoreBadge}${badge}</div>
+        </div>
+        <div class="price-row">
+          <span class="price-current">${d.price_fmt}</span>
+          ${origPrice}${disc}
+        </div>
+        <div class="meta">
+          <span><span class="card-icon">${ICON_SHOPPING_BAG}</span>${esc(d.merchant)}</span>
+          <span><span class="card-icon">${ICON_TAG}</span>${esc(d.category || '–')}</span>
+          <span><span class="card-icon">${ICON_CALENDAR}</span>${d.published_fmt}</span>
+          ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at)}</span>` : ''}
+          ${expiresAt ? `<span class="expires-label"><span class="card-icon">${ICON_HOURGLASS}</span><span class="expires-countdown"></span></span>` : ''}
+        </div>
+        ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener"><span class="card-icon">${ICON_EXTERNAL_LINK}</span>${esc(d.link_host)}</a>` : ''}
+        <div class="hot-bar-wrap">
+          <span><span class="card-icon">${ICON_THERMOMETER}</span>${Math.round(d.temperature || 0)}°</span>
+          <div class="hot-bar-bg"><div class="hot-bar-fill" style="width:${barWidth}%"></div></div>
+        </div>
+      </div>`;
+  }
+
+  function cardElementFromHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html.trim();
+    return tmp.firstElementChild;
+  }
 
   function renderDeals(deals) {
     loading.style.display = 'none';
     if (!deals.length) {
       grid.innerHTML = '<p style="color:#64748b;grid-column:1/-1;text-align:center">Keine Deals gefunden.</p>';
       grid.style.display = 'grid';
+      hasRenderedOnce = true;
       return;
     }
     // Four strict, non-overlapping blocks: neu > preisfehler > hot > rest,
@@ -1010,71 +1084,62 @@
       const tierDiff = dealTier(a) - dealTier(b);
       return tierDiff !== 0 ? tierDiff : (b.score || 0) - (a.score || 0);
     });
-    grid.innerHTML = deals.map((d, i) => {
-      const staggerDelay = hasRenderedOnce ? 0 : Math.min(i, 12) * 35;
-      const expired = d.is_expired;
-      const hot = d.is_hot;
-      const isNew = d.source === 'new';
-      const badge = expired
-        ? '<span class="badge badge-expired">Abgelaufen</span>'
-        : d.is_new_this_sync
-          ? `<span class="badge badge-new"><span class="card-icon">${ICON_ZAP}</span>Neu</span>`
-          : hot
-            ? `<span class="badge badge-hot"><span class="card-icon">${ICON_FLAME}</span>Hot</span>`
-            : '<span class="badge badge-active">Aktiv</span>';
-      const score = d.score || 0;
-      const scoreTier = score >= 70 ? 'high' : score >= 40 ? 'mid' : 'low';
-      const scoreBadge = `<span class="score-badge score-${scoreTier}" title="Prioritäts-Score">${score}</span>`;
 
-      let availBadge = '';
-      if (!isNew && !expired && d.availability_status === 'unavailable') {
-        availBadge = `<span class="avail-badge avail-unavailable" title="Shop-Seite wirkt evtl. ausverkauft/entfernt"><span class="card-icon" style="margin-right:0">${ICON_ALERT}</span></span>`;
-      } else if (!isNew && !expired && d.availability_status === 'available') {
-        availBadge = `<span class="avail-badge avail-available" title="Shop-Seite wirkt noch verfügbar"><span class="card-icon" style="margin-right:0">${ICON_CHECK}</span></span>`;
+    // FLIP "First": remember where cards that already exist currently sit,
+    // keyed by thread_id, before we rebuild the grid.
+    const oldRects = new Map();
+    grid.querySelectorAll('.card[data-thread-id]').forEach(el => {
+      oldRects.set(el.dataset.threadId, el.getBoundingClientRect());
+    });
+
+    const fragment = document.createDocumentFragment();
+    const entries = [];
+    let newIdx = 0;
+    deals.forEach(d => {
+      const id = String(d.thread_id);
+      const el = cardElementFromHtml(buildCardHtml(d));
+      const isNewCard = !oldRects.has(id);
+      if (isNewCard) {
+        el.classList.add('card-entering');
+        const delay = hasRenderedOnce ? Math.min(newIdx, 8) * 45 : Math.min(newIdx, 12) * 35;
+        el.style.animationDelay = delay + 'ms';
+        newIdx++;
       }
+      entries.push({ el, id, isNewCard });
+      fragment.appendChild(el);
+    });
 
-      const origPrice = d.next_best_fmt
-        ? `<span class="price-orig">${d.next_best_fmt}</span>` : '';
-      const disc = d.discount_pct
-        ? `<span class="discount">-${d.discount_pct}%</span>` : '';
-
-      const barWidth = d.hot_bar_width || 0;
-      // Hot 'new' deals get a longer display window (1h) than regular new
-      // deals (40 min), but still auto-fade on a timer either way.
-      const expiresAt = isNew && d.published_at
-        ? d.published_at * 1000 + (hot ? 3600000 : 2400000)
-        : null;
-
-      return `
-        <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}" style="animation-delay:${staggerDelay}ms"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
-          <div class="preisfehler-label"><span class="card-icon">${ICON_ALERT_TRIANGLE}</span>Preisfehler</div>
-          ${d.is_spiking ? `<span class="spike-badge"><span class="card-icon">${ICON_TRENDING_UP}</span>heizt auf</span>` : ''}
-          ${d.keyword_match ? `<span class="keyword-badge"><span class="card-icon">${ICON_SEARCH}</span>${esc(d.keyword_match)}</span>` : ''}
-          ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
-          <div class="card-top">
-            <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
-            <div class="badge-group">${availBadge}${scoreBadge}${badge}</div>
-          </div>
-          <div class="price-row">
-            <span class="price-current">${d.price_fmt}</span>
-            ${origPrice}${disc}
-          </div>
-          <div class="meta">
-            <span><span class="card-icon">${ICON_SHOPPING_BAG}</span>${esc(d.merchant)}</span>
-            <span><span class="card-icon">${ICON_TAG}</span>${esc(d.category || '–')}</span>
-            <span><span class="card-icon">${ICON_CALENDAR}</span>${d.published_fmt}</span>
-            ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at)}</span>` : ''}
-            ${expiresAt ? `<span class="expires-label"><span class="card-icon">${ICON_HOURGLASS}</span><span class="expires-countdown"></span></span>` : ''}
-          </div>
-          ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener"><span class="card-icon">${ICON_EXTERNAL_LINK}</span>${esc(d.link_host)}</a>` : ''}
-          <div class="hot-bar-wrap">
-            <span><span class="card-icon">${ICON_THERMOMETER}</span>${Math.round(d.temperature || 0)}°</span>
-            <div class="hot-bar-bg"><div class="hot-bar-fill" style="width:${barWidth}%"></div></div>
-          </div>
-        </div>`;
-    }).join('');
+    // "Last": drop the rebuilt cards into the grid in their new order.
+    grid.innerHTML = '';
+    grid.appendChild(fragment);
     grid.style.display = 'grid';
     hasRenderedOnce = true;
+
+    // "Invert" + "Play": cards that existed before get an inverse transform
+    // applied immediately (so they visually stay put), then animate that
+    // transform back to zero — reads as sliding to the new spot instead of
+    // popping/flickering. New cards use the fade+scale entrance instead.
+    if (!prefersReducedMotion) {
+      requestAnimationFrame(() => {
+        entries.forEach(({ el, id, isNewCard }) => {
+          if (isNewCard) return;
+          const oldRect = oldRects.get(id);
+          if (!oldRect) return;
+          const newRect = el.getBoundingClientRect();
+          const dx = oldRect.left - newRect.left;
+          const dy = oldRect.top - newRect.top;
+          if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+          el.style.transition = 'none';
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+          requestAnimationFrame(() => {
+            el.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
+            el.style.transform = '';
+            setTimeout(() => { el.style.transition = ''; }, 420);
+          });
+        });
+      });
+    }
+
     checkBrowserNotifications(deals);
     checkPreisfehlerAlerts(deals);
     updateStatsBar(deals);
