@@ -1800,7 +1800,7 @@
       const expSecs = Math.round((expiresAtMs - Date.now()) / 1000);
       if (expSecs > 0) {
         const mins = Math.max(1, Math.round(expSecs / 60));
-        html += ` <span class="expires-label">(Verschwindet in ${mins} Minute${mins === 1 ? '' : 'n'})</span>`;
+        html += ` <span class="expires-label">(Verschwindet in ${mins} Min)</span>`;
       }
     }
     return html;
