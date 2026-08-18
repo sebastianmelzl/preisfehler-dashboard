@@ -1293,33 +1293,40 @@
   function playGong() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      // Westminster Chimes opening phrase ("Big Ben") — E5, C#5, D5, G4
-      const notes = [659.25, 554.37, 587.33, 392.00];
-      const noteGap = 0.65;
-      // Bell partials (prime, minor-third tierce, quint, octave nominal) instead of
-      // plain harmonics — the tierce is what makes it read as a bell, not a beep.
-      const partials = [
-        { ratio: 0.5,  gain: 0.25 },
-        { ratio: 1,    gain: 0.55 },
-        { ratio: 1.19, gain: 0.4 },
-        { ratio: 1.5,  gain: 0.28 },
-        { ratio: 2,    gain: 0.2 },
-      ];
+      // NBC chimes — G4, E4, C4 (the classic "important announcement" 3-note sting)
+      const notes = [392.00, 329.63, 261.63];
+      const noteGap = 0.55;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 3000;
+      filter.connect(ctx.destination);
       notes.forEach((freq, i) => {
         const start = ctx.currentTime + i * noteGap;
-        partials.forEach(({ ratio, gain: peak }) => {
-          const osc = ctx.createOscillator();
-          osc.type = 'sine';
-          osc.frequency.value = freq * ratio;
-          const gain = ctx.createGain();
-          gain.gain.setValueAtTime(0, start);
-          gain.gain.linearRampToValueAtTime(peak, start + 0.01);
-          gain.gain.exponentialRampToValueAtTime(0.001, start + 1.8);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(start);
-          osc.stop(start + 2.0);
-        });
+        // Fundamental + a quiet octave overtone for a touch of warmth/shimmer,
+        // simple enough to stay clean instead of sounding harsh.
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.5, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 1.4);
+        osc.connect(gain);
+        gain.connect(filter);
+        osc.start(start);
+        osc.stop(start + 1.5);
+
+        const osc2 = ctx.createOscillator();
+        osc2.type = 'sine';
+        osc2.frequency.value = freq * 2;
+        const gain2 = ctx.createGain();
+        gain2.gain.setValueAtTime(0, start);
+        gain2.gain.linearRampToValueAtTime(0.15, start + 0.02);
+        gain2.gain.exponentialRampToValueAtTime(0.001, start + 1.0);
+        osc2.connect(gain2);
+        gain2.connect(filter);
+        osc2.start(start);
+        osc2.stop(start + 1.1);
       });
     } catch (e) {}
   }
