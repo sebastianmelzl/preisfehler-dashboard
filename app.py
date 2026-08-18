@@ -243,17 +243,6 @@ def api_deals():
         hot_bar_width = scraper.hot_bar_width(temp, max_temp)
         keyword_match = next((kw for kw in active_kws if kw in (d.get("title") or "").lower()), None)
 
-        # Priority score (0-100): how much this deal deserves attention right
-        # now, combining community validation (discount, temperature, the
-        # preisfehler tag itself), momentum (spiking), and personal relevance
-        # (keyword match) into one sortable number instead of ad-hoc tiers.
-        score = 0.0
-        score += min(d.get("discount_pct") or 0, 100) * 0.35
-        score += hot_bar_width * 0.25
-        score += 20 if d.get("source") == "preisfehler" else 0
-        score += 15 if is_spiking else 0
-        score += 10 if keyword_match else 0
-
         result.append({
             **d,
             "hot_bar_width": hot_bar_width,
@@ -266,7 +255,6 @@ def api_deals():
             "is_new_this_sync": int(d.get("sync_seq") or 0) == current_seq and current_seq > 0,
             "keyword_match": keyword_match,
             "is_spiking": is_spiking,
-            "score": min(round(score), 100),
         })
     return jsonify(result)
 
