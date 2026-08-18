@@ -283,13 +283,13 @@ def mark_edit_checked(thread_id, is_edited):
 
 
 def get_deals_needing_edit_check(limit=5):
-    """Active preisfehler deals never checked against mydealz's own
+    """Active deals (any source) never checked against mydealz's own
     "Aktualisiert vor …" label — covers deals inserted before this feature
     existed, backfilled a few at a time to bound extra HTTP calls."""
     with get_conn() as conn:
         return conn.execute(
             """SELECT thread_id, url FROM deals
-               WHERE source = 'preisfehler' AND is_expired = 0 AND edit_checked = 0
+               WHERE is_expired = 0 AND edit_checked = 0
                ORDER BY published_at DESC LIMIT %s""",
             (limit,),
         ).fetchall()

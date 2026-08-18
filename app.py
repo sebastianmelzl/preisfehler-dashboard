@@ -147,7 +147,12 @@ def run_sync():
         try:
             new_raw, _ = scraper.fetch_new_deals(limit=20)
             new_normalised = [_normalise(t) for t in new_raw]
-            _, spike_deals = db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
+            new_ids2, spike_deals = db.upsert_deals(new_normalised, source="new", sync_seq=current_seq)
+            new_by_id = {d["thread_id"]: d for d in new_normalised}
+            for tid in new_ids2:
+                d = new_by_id.get(tid)
+                if d:
+                    db.mark_edit_checked(tid, scraper.has_thread_update(d["url"]))
             if spike_deals:
                 notifier.notify_temperature_spike(spike_deals)
                 db.mark_spike_notified([d["thread_id"] for d in spike_deals])
