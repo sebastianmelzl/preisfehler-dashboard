@@ -1315,47 +1315,58 @@
     mp3:      { file: '/static/sounds/light-hearted-message-tone.mp3' }, // real recorded sound
   };
 
+  // Returns a Promise that resolves once the gong has finished playing, so
+  // callers (e.g. the voice announcement) can wait for it before continuing.
   function playGong() {
-    try {
-      const pattern = GONG_SOUNDS[gongSoundSelect.value] || GONG_SOUNDS.nbc;
-      if (pattern.file) {
-        new Audio(pattern.file).play().catch(() => {});
-        return;
-      }
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 3000;
-      filter.connect(ctx.destination);
-      pattern.notes.forEach((freq, i) => {
-        const start = ctx.currentTime + i * pattern.gap;
-        // Fundamental + a quiet octave overtone for a touch of warmth/shimmer,
-        // simple enough to stay clean instead of sounding harsh.
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(0.5, start + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + pattern.decay);
-        osc.connect(gain);
-        gain.connect(filter);
-        osc.start(start);
-        osc.stop(start + pattern.decay + 0.1);
+    return new Promise((resolve) => {
+      try {
+        const pattern = GONG_SOUNDS[gongSoundSelect.value] || GONG_SOUNDS.nbc;
+        if (pattern.file) {
+          const audio = new Audio(pattern.file);
+          audio.onended = resolve;
+          audio.onerror = resolve;
+          audio.play().catch(resolve);
+          return;
+        }
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 3000;
+        filter.connect(ctx.destination);
+        pattern.notes.forEach((freq, i) => {
+          const start = ctx.currentTime + i * pattern.gap;
+          // Fundamental + a quiet octave overtone for a touch of warmth/shimmer,
+          // simple enough to stay clean instead of sounding harsh.
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(0.5, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + pattern.decay);
+          osc.connect(gain);
+          gain.connect(filter);
+          osc.start(start);
+          osc.stop(start + pattern.decay + 0.1);
 
-        const osc2 = ctx.createOscillator();
-        osc2.type = 'sine';
-        osc2.frequency.value = freq * 2;
-        const gain2 = ctx.createGain();
-        gain2.gain.setValueAtTime(0, start);
-        gain2.gain.linearRampToValueAtTime(0.15, start + 0.02);
-        gain2.gain.exponentialRampToValueAtTime(0.001, start + pattern.decay * 0.7);
-        osc2.connect(gain2);
-        gain2.connect(filter);
-        osc2.start(start);
-        osc2.stop(start + pattern.decay * 0.7 + 0.1);
-      });
-    } catch (e) {}
+          const osc2 = ctx.createOscillator();
+          osc2.type = 'sine';
+          osc2.frequency.value = freq * 2;
+          const gain2 = ctx.createGain();
+          gain2.gain.setValueAtTime(0, start);
+          gain2.gain.linearRampToValueAtTime(0.15, start + 0.02);
+          gain2.gain.exponentialRampToValueAtTime(0.001, start + pattern.decay * 0.7);
+          osc2.connect(gain2);
+          gain2.connect(filter);
+          osc2.start(start);
+          osc2.stop(start + pattern.decay * 0.7 + 0.1);
+        });
+        const totalDuration = (pattern.notes.length - 1) * pattern.gap + pattern.decay + 0.2;
+        setTimeout(resolve, totalDuration * 1000);
+      } catch (e) {
+        resolve();
+      }
+    });
   }
 
   function fmtEuroSpoken(value) {
@@ -1367,12 +1378,13 @@
 
   async function _speakViaServer(text) {
     try {
+      await playGong();
       const resp = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, voice: voiceSelect.value }),
       });
-      if (!resp.ok) return;
+      if (!resp.ok) { await playGong(); return; }
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
@@ -1382,6 +1394,7 @@
         audio.play().catch(resolve);
       });
       URL.revokeObjectURL(url);
+      await playGong();
     } catch (e) {}
   }
 
