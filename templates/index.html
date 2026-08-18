@@ -1146,6 +1146,8 @@
     '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><circle cx="96" cy="96" r="80" fill="#64748b"/></svg>'
   );
 
+  const NOTIF_AUTO_CLOSE_MS = 8000;
+
   function fireBrowserNotification(title, body, url, urgent = false) {
     try {
       const n = new Notification(title, {
@@ -1154,6 +1156,14 @@
         icon: urgent ? NOTIF_ICON_URGENT : NOTIF_ICON_NORMAL,
       });
       n.onclick = () => { window.focus(); window.open(url, '_blank'); n.close(); };
+      // requireInteraction alone isn't reliable across OS/browser combos —
+      // some systems (e.g. macOS with "Dauerhaft" alert style) keep every
+      // notification on screen regardless of it. Actively close non-urgent
+      // ones ourselves so "normal" behaves as auto-dismissing no matter
+      // what the OS-level style is set to.
+      if (!urgent) {
+        setTimeout(() => n.close(), NOTIF_AUTO_CLOSE_MS);
+      }
     } catch {}
   }
 
