@@ -107,7 +107,7 @@ def run_sync():
             if d:
                 db.mark_edit_checked(tid, scraper.has_thread_update(d["url"]))
 
-        for row in db.get_deals_needing_edit_check(limit=5):
+        for row in db.get_deals_needing_edit_check():
             db.mark_edit_checked(row["thread_id"], scraper.has_thread_update(row["url"]))
 
         if normalised:

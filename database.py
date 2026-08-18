@@ -282,7 +282,7 @@ def mark_edit_checked(thread_id, is_edited):
         )
 
 
-def get_deals_needing_edit_check(limit=5):
+def get_deals_needing_edit_check(limit=30):
     """Active deals (any source) never checked against mydealz's own
     "Aktualisiert vor …" label — covers deals inserted before this feature
     existed, backfilled a few at a time to bound extra HTTP calls."""
