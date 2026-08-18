@@ -481,6 +481,25 @@
     #settings-panel { max-width: 1100px; margin: 0 auto 24px; }
     .settings-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
     .settings-hint { font-size: 0.78rem; color: var(--text-faint); margin: 0; }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-info { display: flex; flex-direction: column; gap: 4px; }
+    .setting-title { font-size: 0.84rem; font-weight: 600; }
+    .setting-section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-faint);
+    }
+
     .kw-add-row { display: flex; gap: 8px; }
     .kw-add-row input {
       flex: 1;
@@ -610,10 +629,18 @@
 <div id="settings-panel" style="display:none">
   <div class="log-inner">
     <div class="log-header">
-      <span><span class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.09H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Keyword-Benachrichtigungen</span>
+      <span><span class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.09H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Einstellungen</span>
       <button id="btn-settings-close"><span class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></button>
     </div>
     <div class="settings-body">
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-title">Fast Poll</div>
+          <p class="settings-hint">Fragt zusätzlich alle 60s (nachts 5 Min) /deals-new ab, um neue Deals schneller zu erkennen als der reguläre Sync.</p>
+        </div>
+        <button id="btn-fastpoll-toggle" class="kw-toggle">Aus</button>
+      </div>
+      <div class="setting-section-label">Keyword-Benachrichtigungen</div>
       <p class="settings-hint">Deals die eines dieser Wörter im Titel enthalten werden per Telegram benachrichtigt und farbig hervorgehoben.</p>
       <div class="kw-add-row">
         <input id="kw-input" type="text" placeholder="Keyword eingeben…" autocomplete="off">
@@ -904,10 +931,26 @@
       </div>`).join('');
   }
 
+  const btnFastPollToggle = document.getElementById('btn-fastpoll-toggle');
+
+  async function loadFastPollStatus() {
+    const res = await fetch('/api/fast-poll');
+    const s = await res.json();
+    btnFastPollToggle.classList.toggle('on', s.enabled);
+    btnFastPollToggle.textContent = s.enabled ? 'An' : 'Aus';
+  }
+
+  btnFastPollToggle.addEventListener('click', async () => {
+    const res = await fetch('/api/fast-poll/toggle', { method: 'POST' });
+    const s = await res.json();
+    btnFastPollToggle.classList.toggle('on', s.enabled);
+    btnFastPollToggle.textContent = s.enabled ? 'An' : 'Aus';
+  });
+
   document.getElementById('btn-settings').addEventListener('click', async () => {
     const open = settingsPanel.style.display !== 'none';
     settingsPanel.style.display = open ? 'none' : 'block';
-    if (!open) await loadKeywords();
+    if (!open) { await loadKeywords(); await loadFastPollStatus(); }
   });
   document.getElementById('btn-settings-close').addEventListener('click', () => {
     settingsPanel.style.display = 'none';

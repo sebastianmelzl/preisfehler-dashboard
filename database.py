@@ -79,7 +79,8 @@ def init_db():
                 sync_interval_minutes INTEGER DEFAULT NULL,
                 sync_interval_max     INTEGER DEFAULT NULL,
                 consecutive_empty     INTEGER DEFAULT 0,
-                sync_seq              INTEGER DEFAULT 0
+                sync_seq              INTEGER DEFAULT 0,
+                fast_poll_enabled     INTEGER DEFAULT 0
             )
         """)
         conn.execute("INSERT INTO sync_status (id) VALUES (1) ON CONFLICT DO NOTHING")
@@ -118,6 +119,7 @@ def init_db():
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_interval_max INTEGER DEFAULT NULL",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS consecutive_empty INTEGER DEFAULT 0",
             "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS sync_seq INTEGER DEFAULT 0",
+            "ALTER TABLE sync_status ADD COLUMN IF NOT EXISTS fast_poll_enabled INTEGER DEFAULT 0",
         ]:
             conn.execute(col_sql)
     logger.info("Database initialised")
@@ -323,6 +325,20 @@ def get_sync_status():
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM sync_status WHERE id=1").fetchone()
     return dict(row) if row else {}
+
+
+def get_fast_poll_enabled():
+    with get_conn() as conn:
+        row = conn.execute("SELECT fast_poll_enabled FROM sync_status WHERE id=1").fetchone()
+    return bool(row["fast_poll_enabled"]) if row else False
+
+
+def set_fast_poll_enabled(enabled):
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE sync_status SET fast_poll_enabled=%s WHERE id=1", (int(bool(enabled)),)
+        )
+    return enabled
 
 
 def increment_empty_sync():

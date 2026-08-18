@@ -191,7 +191,8 @@ def start_fast_poll():
     def loop():
         while True:
             try:
-                _fast_poll_once()
+                if db.get_fast_poll_enabled():
+                    _fast_poll_once()
             except Exception as e:
                 logger.error("Fast-poll iteration failed: %s", e)
             # choose interval
@@ -327,6 +328,18 @@ def api_keywords_delete(keyword_id):
 def api_keywords_toggle(keyword_id):
     db.toggle_keyword(keyword_id)
     return jsonify({"ok": True})
+
+
+@app.route("/api/fast-poll")
+def api_fast_poll_get():
+    return jsonify({"enabled": db.get_fast_poll_enabled()})
+
+
+@app.route("/api/fast-poll/toggle", methods=["POST"])
+def api_fast_poll_toggle():
+    enabled = not db.get_fast_poll_enabled()
+    db.set_fast_poll_enabled(enabled)
+    return jsonify({"enabled": enabled})
 
 
 @app.route("/api/sync/log")
