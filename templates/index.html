@@ -445,11 +445,22 @@
     /* Two fixed rows instead of one big flex-wrap list — which item wraps
        to a second line used to depend on how long the merchant/category
        text for that particular card happened to be, so it looked
-       inconsistent from card to card. */
-    .meta-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .meta-row span { display: flex; align-items: center; gap: 3px; }
+       inconsistent from card to card. Each row stays on a single line
+       (nowrap) and its items shrink+ellipsize instead of wrapping, so the
+       whole thing is reliably exactly two lines. */
+    .meta-row { display: flex; flex-wrap: nowrap; gap: 8px; min-width: 0; }
+    .meta-row span {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      min-width: 0;
+      flex-shrink: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
-    .card-icon { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
+    .card-icon { display: inline-flex; vertical-align: -2px; margin-right: 4px; flex-shrink: 0; }
     .card-icon svg { width: 12px; height: 12px; display: block; }
     .meta-row span .card-icon { margin-right: 0; }
 
