@@ -962,6 +962,11 @@
           <option value="de-AT-JonasNeural">🎤 Jonas (AT)</option>
         </select>
       </div>
+      <div class="setting-section-label">Automatisches Öffnen</div>
+      <p class="settings-hint">Öffnet die Shop-Seite bei neuem Preisfehler automatisch in einem neuen Tab. Browser blockieren das standardmäßig als Pop-up — dafür musst du Pop-ups für diese Seite in deinen Browser-Einstellungen einmalig erlauben, sonst passiert einfach nichts.</p>
+      <div class="notif-cat-row">
+        <label class="notif-cat"><input type="checkbox" id="autoopen-preisfehler"> Shop-Seite automatisch öffnen</label>
+      </div>
       <div class="setting-section-label">Keyword-Benachrichtigungen</div>
       <p class="settings-hint">Deals die eines dieser Wörter im Titel enthalten werden per Telegram benachrichtigt und farbig hervorgehoben.</p>
       <div class="kw-add-row">
@@ -1597,6 +1602,20 @@
     localStorage.setItem('ttsVoice', voiceSelect.value);
   });
 
+  // Auto-open the shop link for new preisfehler in a new tab. Browsers
+  // block window.open() calls that aren't triggered by a direct click, so
+  // this only actually works once the user has allowed pop-ups for this
+  // site — otherwise it silently no-ops, which the settings hint explains.
+  let autoOpenEnabled = localStorage.getItem('autoOpenPreisfehler') === 'true';
+  let autoOpenSeenIds = loadSeenSet('autoOpenSeen_preisfehler');
+
+  const autoOpenCheckbox = document.getElementById('autoopen-preisfehler');
+  autoOpenCheckbox.checked = autoOpenEnabled;
+  autoOpenCheckbox.addEventListener('change', () => {
+    autoOpenEnabled = autoOpenCheckbox.checked;
+    localStorage.setItem('autoOpenPreisfehler', autoOpenEnabled);
+  });
+
   const GONG_SOUNDS = {
     nbc:      { notes: [392.00, 329.63, 261.63], gap: 0.55, decay: 1.4 }, // G4-E4-C4
     bigben:   { notes: [659.25, 554.37, 587.33, 392.00], gap: 0.6, decay: 1.8 }, // Westminster opening
@@ -1703,7 +1722,7 @@
   });
 
   function checkPreisfehlerAlerts(deals) {
-    if (!gongEnabled && !voiceEnabled) return;
+    if (!gongEnabled && !voiceEnabled && !autoOpenEnabled) return;
     for (const d of deals) {
       if (d.source !== 'preisfehler' || d.is_expired) continue;
       if (gongEnabled && !gongSeenIds.has(d.thread_id)) {
@@ -1713,6 +1732,10 @@
       if (voiceEnabled && !voiceSeenIds.has(d.thread_id)) {
         markSeen(voiceSeenIds, 'voiceSeen_preisfehler', d.thread_id);
         speakPreisfehler(d);
+      }
+      if (autoOpenEnabled && !autoOpenSeenIds.has(d.thread_id)) {
+        markSeen(autoOpenSeenIds, 'autoOpenSeen_preisfehler', d.thread_id);
+        if (d.shop_url) window.open(d.shop_url, '_blank', 'noopener');
       }
     }
   }
