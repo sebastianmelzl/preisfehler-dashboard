@@ -800,6 +800,32 @@
       margin-bottom: 4px;
     }
 
+    /* Deals over 200° get a pulsing fire glow instead of a static badge —
+       the temperature itself is the signal, not a trend. */
+    @keyframes cardBurn {
+      0%, 100% {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 1px #ef444455, 0 4px 22px #ef444440, 0 0 32px #f9731630;
+      }
+      50% {
+        border-color: #f97316;
+        box-shadow: 0 0 0 1px #f9731670, 0 6px 30px #f9731660, 0 0 48px #ef444455;
+      }
+    }
+    .card.burning {
+      animation: cardBurn 1.8s ease-in-out infinite;
+    }
+    body.light .card.burning {
+      background: #fff1ee !important;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .card.burning {
+        animation: none;
+        border-color: #ef4444;
+        box-shadow: 0 0 0 1px #ef444455, 0 4px 22px #ef444440, 0 0 32px #f9731630;
+      }
+    }
+
     .updated-badge {
       display: inline-flex;
       align-items: center;
@@ -1066,9 +1092,10 @@
     const expiresAt = isNew && d.published_at
       ? d.published_at * 1000 + (hot ? 3600000 : 2400000)
       : null;
+    const burning = !expired && (d.temperature || 0) > 200;
 
     return `
-      <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}${d.is_comment_spike ? ' comment-spiking' : ''}" data-thread-id="${d.thread_id}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
+      <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}${d.is_comment_spike ? ' comment-spiking' : ''}${burning ? ' burning' : ''}" data-thread-id="${d.thread_id}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
         <div class="preisfehler-label"><span class="card-icon">${ICON_ALERT_TRIANGLE}</span>Preisfehler</div>
         ${editedBadge ? `<span class="updated-badge" title="mydealz zeigt auf der Dealseite einen 'Aktualisiert vor …'-Hinweis für diesen Deal"><span class="card-icon">${ICON_REFRESH}</span>Bearbeiteter Deal</span>` : ''}
         ${d.is_spiking ? `<span class="spike-badge"><span class="card-icon">${ICON_TRENDING_UP}</span>heizt auf</span>` : ''}
