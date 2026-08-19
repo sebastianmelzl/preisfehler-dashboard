@@ -1034,6 +1034,7 @@
   }
 
   let hasRenderedOnce = false;
+  let lastDeals = [];
   const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function buildCardHtml(d, editedBadge) {
@@ -1108,6 +1109,7 @@
   }
 
   function renderDeals(deals) {
+    lastDeals = deals;
     loading.style.display = 'none';
     if (!deals.length) {
       grid.innerHTML = '<p style="color:#64748b;grid-column:1/-1;text-align:center">Keine Deals gefunden.</p>';
@@ -1783,6 +1785,9 @@
     const card = btn.closest('.card');
     card.classList.add('expired');
     btn.remove();
+    const d = lastDeals.find(x => String(x.thread_id) === String(threadId));
+    if (d) d.is_expired = 1;
+    updateStatsBar(lastDeals);
   });
 
   function fmtAgo(secs) {
