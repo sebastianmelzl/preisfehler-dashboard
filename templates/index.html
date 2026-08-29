@@ -1531,7 +1531,9 @@
         const dt = new Date(s.deployed_at + 'Z');
         const dtStr = dt.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}) + ' ' +
                       dt.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
-        deployInfo.textContent = `Deploy ${dtStr}`;
+        deployInfo.textContent = s.deploy_commit
+          ? `Deploy ${dtStr} · ${s.deploy_commit}`
+          : `Deploy ${dtStr}`;
         deployInfo.title = s.deploy_commit ? `Commit ${s.deploy_commit}` : '';
       }
 
