@@ -1390,12 +1390,18 @@
     }
 
     const nowSec = Date.now() / 1000;
-    const byNewest = (a, b) => (b.published_at || 0) - (a.published_at || 0);
+    // Active deals first (newest first), then the greyed-out ones
+    // (expired / moderation-removed) pushed to the very end.
+    const bySort = (a, b) => {
+      const ax = a.is_expired ? 1 : 0, bx = b.is_expired ? 1 : 0;
+      if (ax !== bx) return ax - bx;
+      return (b.published_at || 0) - (a.published_at || 0);
+    };
 
     // Preisfehler get their own vertical column on the left (wide screens);
     // on narrow screens they stay mixed into the grid, sorted to the front.
-    const pfDeals = deals.filter(d => d.source === 'preisfehler').sort(byNewest);
-    const otherDeals = deals.filter(d => d.source !== 'preisfehler').sort(byNewest);
+    const pfDeals = deals.filter(d => d.source === 'preisfehler').sort(bySort);
+    const otherDeals = deals.filter(d => d.source !== 'preisfehler').sort(bySort);
     const gridDeals = columnMode ? otherDeals : [...pfDeals, ...otherDeals];
     const colDeals = columnMode ? pfDeals : [];
 
