@@ -67,11 +67,79 @@
       min-height: 100vh;
       padding: 24px 16px;
       transition: background 0.2s, color 0.2s;
+      /* keep the header's outer glow from ever nudging a horizontal scrollbar */
+      overflow-x: clip;
+    }
+
+    /* ---------- Header with a travelling glow ---------- */
+    @property --hdr-angle {
+      syntax: "<angle>";
+      initial-value: 0deg;
+      inherits: false;
+    }
+    @keyframes hdr-rotate { to { --hdr-angle: 360deg; } }
+
+    .header-wrap {
+      position: relative;
+      max-width: 1100px;
+      margin: 0 auto 28px;
+      border-radius: 18px;
+      isolation: isolate;
+    }
+
+    /* soft bloom that spills outside the card */
+    .header-wrap::before {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 20px;
+      background: conic-gradient(from var(--hdr-angle),
+        transparent 0deg,
+        transparent 232deg,
+        rgba(96,165,250,.45) 296deg,
+        rgba(199,234,254,.85) 340deg,
+        rgba(103,232,249,.55) 350deg,
+        transparent 360deg);
+      filter: blur(17px);
+      opacity: .8;
+      z-index: -2;
+      pointer-events: none;
+      animation: hdr-rotate 5.5s linear infinite;
+    }
+    body.light .header-wrap::before { opacity: .5; }
+
+    /* crisp 1.5px ring carrying the bright comet head */
+    .header-wrap::after {
+      content: "";
+      position: absolute;
+      inset: -1.5px;
+      border-radius: inherit;
+      padding: 1.5px;
+      background: conic-gradient(from var(--hdr-angle),
+        rgba(148,163,184,.28) 0deg,
+        rgba(148,163,184,.28) 210deg,
+        #60a5fa 292deg,
+        #a5b4fc 322deg,
+        #eaf6ff 344deg,
+        #67e8f9 351deg,
+        #60a5fa 360deg);
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      z-index: -1;
+      pointer-events: none;
+      animation: hdr-rotate 5.5s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .header-wrap::before, .header-wrap::after { animation: none; }
     }
 
     header {
-      max-width: 1100px;
-      margin: 0 auto 28px;
+      position: relative;
+      z-index: 1;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -81,6 +149,17 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       overflow-x: auto;
+      /* permanent ambient glow so the block is always "lit" */
+      box-shadow:
+        0 0 0 1px rgba(96,165,250,.07),
+        0 10px 34px -14px rgba(59,130,246,.30),
+        0 0 46px -10px rgba(96,165,250,.16);
+    }
+    body.light header {
+      box-shadow:
+        0 0 0 1px rgba(59,130,246,.08),
+        0 10px 30px -14px rgba(59,130,246,.20),
+        0 0 40px -12px rgba(96,165,250,.14);
     }
 
     .header-left {
@@ -998,6 +1077,7 @@
 </head>
 <body>
 
+<div class="header-wrap">
 <header>
   <div class="header-left">
     <h1>Mydealz Dashboard</h1>
@@ -1024,6 +1104,7 @@
     </div>
   </div>
 </header>
+</div>
 
 <div id="stats-bar" style="display:none"></div>
 
