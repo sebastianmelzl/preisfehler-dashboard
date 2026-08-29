@@ -2,25 +2,60 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mydealz Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Preisfehler Dashboard</title>
+  <meta name="description" content="Live-Überwachung von mydealz-Preisfehlern und Deals.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f1f5f9" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1117'/%3E%3Cpath d='M17.5 4 8 18h7l-1.5 10L24 13h-7z' fill='%23f97316'/%3E%3C/svg%3E">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ---------- Dark theme (default) ---------- */
+    /* ============================================================
+       DESIGN TOKENS — one source of truth
+       ============================================================ */
     :root {
+      /* spacing (4pt) */
+      --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+      --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+      /* radius */
+      --r-1: 6px; --r-2: 8px; --r-3: 10px; --r-4: 12px; --r-5: 14px; --r-6: 16px; --r-pill: 999px;
+      /* type scale */
+      --fs-xs: 0.72rem; --fs-sm: 0.82rem; --fs-md: 0.92rem; --fs-lg: 1.1rem;
+      --fs-xl: 1.35rem; --fs-2xl: 1.9rem; --fs-3xl: 2.6rem;
+      --lh-tight: 1.2; --lh-snug: 1.35;
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-body:    'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      /* motion */
+      --ease-out:    cubic-bezier(0.2, 0, 0, 1);
+      --ease-inout:  cubic-bezier(0.65, 0, 0.35, 1);
+      --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+      --dur-fast: 0.14s; --dur-base: 0.25s; --dur-slow: 0.4s;
+      /* brand accent = the price-error orange, used with conviction */
+      --accent:        #f97316;
+      --accent-bright: #fb923c;
+      --accent-quiet:  rgba(249, 115, 22, 0.14);
+      --accent-ring:   rgba(249, 115, 22, 0.42);
+      --focus:         #7dd3fc;
+
+      /* ---------- Dark theme (default) ---------- */
       --bg:           #0f1117;
       --bg-card:      #1a1f2e;
       --bg-input:     #1e293b;
       --bg-input-hover: #273549;
-      --border:       #2d3748;
-      --border-hover: #4a5568;
-      --text:         #e2e8f0;
-      --text-muted:   #94a3b8;
-      --text-faint:   #64748b;
+      --border:       rgba(255, 255, 255, 0.09);
+      --border-strong: rgba(255, 255, 255, 0.14);
+      --border-hover: rgba(255, 255, 255, 0.22);
+      --text:         #e6ebf3;
+      --text-muted:   #9aa7ba;
+      --text-faint:   #7c8ba1;
       --link-hover:   #93c5fd;
       --price:        #34d399;
       --discount-bg:  #1e3a5f;
@@ -32,21 +67,27 @@
       --active-bg:    #1a2a1a;
       --spinner-track:#334155;
       --spinner-head: #93c5fd;
-      --font-display: 'Space Grotesk', -apple-system, sans-serif;
-      --font-body:    'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --el-1: 0 1px 2px rgba(0,0,0,.24), 0 6px 16px -10px rgba(0,0,0,.4);
+      --el-2: 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45);
+      --el-3: 0 4px 10px rgba(0,0,0,.3), 0 20px 40px -16px rgba(0,0,0,.55);
+      --scrollbar: rgba(255,255,255,.16);
     }
 
     /* ---------- Light theme ---------- */
     body.light {
+      --accent-quiet: rgba(234, 88, 12, 0.10);
+      --accent-ring:  rgba(234, 88, 12, 0.34);
+      --focus:        #0284c7;
       --bg:           #f1f5f9;
       --bg-card:      #ffffff;
-      --bg-input:     #e2e8f0;
-      --bg-input-hover: #cbd5e1;
-      --border:       #cbd5e1;
-      --border-hover: #94a3b8;
+      --bg-input:     #eef2f7;
+      --bg-input-hover: #e2e8f0;
+      --border:       rgba(15, 23, 42, 0.10);
+      --border-strong: rgba(15, 23, 42, 0.16);
+      --border-hover: rgba(15, 23, 42, 0.26);
       --text:         #0f172a;
       --text-muted:   #475569;
-      --text-faint:   #64748b;
+      --text-faint:   #5b6b82;
       --link-hover:   #2563eb;
       --price:        #059669;
       --discount-bg:  #dbeafe;
@@ -58,6 +99,28 @@
       --active-bg:    #dcfce7;
       --spinner-track:#cbd5e1;
       --spinner-head: #2563eb;
+      --el-1: 0 1px 2px rgba(15,23,42,.06), 0 6px 16px -10px rgba(15,23,42,.14);
+      --el-2: 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18);
+      --el-3: 0 4px 10px rgba(15,23,42,.08), 0 20px 40px -18px rgba(15,23,42,.22);
+      --scrollbar: rgba(15,23,42,.2);
+    }
+
+    /* ---------- Global craft ---------- */
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-1); }
+    ::selection { background: var(--accent); color: #fff; }
+    * { scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
+    ::-webkit-scrollbar { width: 9px; height: 9px; }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: var(--r-pill); border: 2px solid transparent; background-clip: content-box; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    /* Freeze decorative animation while the tab is hidden (perf + battery). */
+    body.paused *, body.paused *::before, body.paused *::after { animation-play-state: paused !important; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
     }
 
     body {
@@ -71,7 +134,10 @@
       overflow-x: clip;
     }
 
-    /* ---------- Header with a travelling glow ---------- */
+    /* ============================================================
+       Header — a restrained travelling light by default; when a price
+       error is live it becomes a deliberate brand-orange signal.
+       ============================================================ */
     @property --hdr-angle  { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
     @property --hdr-angle2 { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
     @keyframes hdr-rotate  { to { --hdr-angle: 360deg; } }
@@ -80,33 +146,31 @@
     .header-wrap {
       position: relative;
       max-width: 1100px;
-      margin: 0 auto 28px;
+      margin: 0 auto var(--sp-8);
       border-radius: 18px;
       isolation: isolate;
     }
 
-    /* Travelling light: ONE uniform bright arc (flat plateau, soft symmetric
-       edges) riding a faint always-lit ring. Seamless 0/360 join and a rigid
-       conic that just rotates, so the band keeps a constant shape + speed. */
+    /* IDLE: one uniform light band on a faint ring — quiet, neutral, slow. */
     .header-wrap::before {                       /* outer bloom */
       content: "";
       position: absolute;
-      inset: -5px;
-      border-radius: 22px;
+      inset: -4px;
+      border-radius: 20px;
       background: conic-gradient(from var(--hdr-angle),
-        rgba(96,165,250,.16) 0deg,
-        rgba(96,165,250,.16) 250deg,
-        rgba(103,232,249,.90) 280deg,
-        rgba(103,232,249,.90) 320deg,
-        rgba(96,165,250,.16) 350deg,
-        rgba(96,165,250,.16) 360deg);
-      filter: blur(19px);
-      opacity: .8;
+        rgba(148,163,184,.10) 0deg,
+        rgba(148,163,184,.10) 256deg,
+        rgba(186,230,253,.55) 288deg,
+        rgba(186,230,253,.55) 320deg,
+        rgba(148,163,184,.10) 352deg,
+        rgba(148,163,184,.10) 360deg);
+      filter: blur(16px);
+      opacity: .7;
       z-index: -2;
       pointer-events: none;
-      animation: hdr-rotate 6s linear infinite;
+      animation: hdr-rotate 9s linear infinite;
     }
-    body.light .header-wrap::before { opacity: .5; }
+    body.light .header-wrap::before { opacity: .45; }
 
     .header-wrap::after {                        /* 1.5px definition ring */
       content: "";
@@ -115,12 +179,12 @@
       border-radius: inherit;
       padding: 1.5px;
       background: conic-gradient(from var(--hdr-angle),
-        rgba(148,163,184,.22) 0deg,
-        rgba(148,163,184,.22) 248deg,
-        rgba(224,247,255,1) 282deg,
-        rgba(224,247,255,1) 318deg,
-        rgba(148,163,184,.22) 352deg,
-        rgba(148,163,184,.22) 360deg);
+        rgba(148,163,184,.20) 0deg,
+        rgba(148,163,184,.20) 252deg,
+        rgba(226,240,255,.95) 288deg,
+        rgba(226,240,255,.95) 320deg,
+        rgba(148,163,184,.20) 356deg,
+        rgba(148,163,184,.20) 360deg);
       -webkit-mask:
         linear-gradient(#000 0 0) content-box,
         linear-gradient(#000 0 0);
@@ -128,33 +192,40 @@
               mask-composite: exclude;
       z-index: -1;
       pointer-events: none;
-      animation: hdr-rotate 6s linear infinite;
+      animation: hdr-rotate 9s linear infinite;
     }
 
-    /* ---- Active preisfehler: crank everything way up ---- */
+    /* ACTIVE price error: the light turns brand-orange, speeds up, blooms. */
     body.has-active-pf .header-wrap::before {
       inset: -14px;
       border-radius: 30px;
       opacity: 1;
-      filter: blur(28px) saturate(1.8) brightness(1.35);
-      animation-duration: 2.2s;
+      filter: blur(26px) saturate(1.4) brightness(1.15);
+      animation-duration: 2.6s;
       background: conic-gradient(from var(--hdr-angle),
-        rgba(129,140,248,.34) 0deg,
-        rgba(129,140,248,.34) 234deg,
-        rgba(217,70,239,.95) 262deg,
-        rgba(56,189,248,1) 292deg,
-        rgba(45,212,191,.98) 322deg,
-        rgba(129,140,248,.34) 350deg,
-        rgba(129,140,248,.34) 360deg);
+        var(--accent-quiet) 0deg,
+        var(--accent-quiet) 232deg,
+        rgba(251,146,60,.95) 268deg,
+        rgba(253,224,71,.98) 296deg,
+        rgba(249,115,22,.95) 324deg,
+        var(--accent-quiet) 352deg,
+        var(--accent-quiet) 360deg);
     }
     body.has-active-pf .header-wrap::after {
       inset: -1.5px;
       padding: 2.5px;
-      animation-duration: 2.2s;
-      filter: brightness(1.25) saturate(1.5) drop-shadow(0 0 7px rgba(56,189,248,.95));
+      animation-duration: 2.6s;
+      filter: brightness(1.15) saturate(1.3) drop-shadow(0 0 7px var(--accent-ring));
+      background: conic-gradient(from var(--hdr-angle),
+        var(--accent-quiet) 0deg,
+        var(--accent-quiet) 244deg,
+        #fff3e0 286deg,
+        #ffd7a1 314deg,
+        var(--accent-quiet) 352deg,
+        var(--accent-quiet) 360deg);
     }
 
-    /* Second, counter-rotating multi-colour comet — active only. */
+    /* Second, counter-rotating warm comet — active only. */
     .hdr-fx {
       position: absolute;
       inset: -16px;
@@ -162,52 +233,52 @@
       pointer-events: none;
       z-index: -3;
       opacity: 0;
-      transition: opacity .5s ease;
+      transition: opacity .5s var(--ease-out);
       background: conic-gradient(from var(--hdr-angle2),
         transparent 0deg,
-        transparent 190deg,
-        rgba(244,114,182,.75) 240deg,
-        rgba(250,204,21,.75) 278deg,
-        rgba(52,211,153,.85) 312deg,
-        rgba(255,255,255,.98) 338deg,
-        rgba(244,114,182,.4) 356deg,
+        transparent 196deg,
+        rgba(249,115,22,.6) 244deg,
+        rgba(253,186,116,.7) 282deg,
+        rgba(254,240,138,.8) 314deg,
+        rgba(255,255,255,.95) 338deg,
+        rgba(249,115,22,.35) 356deg,
         transparent 360deg);
-      filter: blur(28px);
-      animation: hdr-rotate2 4.5s linear infinite;
+      filter: blur(26px);
+      animation: hdr-rotate2 5s linear infinite;
     }
-    body.has-active-pf .hdr-fx { opacity: 1; }
+    body.has-active-pf .hdr-fx { opacity: .95; }
 
-    /* Twinkling sparkles around the perimeter — active only. */
+    /* Twinkling sparkles around the perimeter — active only, warm. */
     .hdr-sparkles {
       position: absolute;
       inset: -16px;
       pointer-events: none;
       z-index: 3;
       opacity: 0;
-      transition: opacity .4s ease;
+      transition: opacity var(--dur-slow) var(--ease-out);
     }
     body.has-active-pf .hdr-sparkles { opacity: 1; }
     .hdr-sparkles i {
       position: absolute;
-      width: 16px;
-      height: 16px;
+      width: 15px;
+      height: 15px;
       display: block;
-      background: radial-gradient(circle, #fff 0%, #e0f2fe 34%, #7dd3fc 60%, transparent 70%);
+      background: radial-gradient(circle, #fff 0%, #fff3e0 34%, #fdba74 60%, transparent 70%);
       clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
       opacity: 0;
       transform: scale(0);
-      filter: drop-shadow(0 0 6px rgba(125,211,252,1)) drop-shadow(0 0 12px rgba(217,70,239,.5));
-      animation: hdr-sparkle 2s ease-in-out infinite;
+      filter: drop-shadow(0 0 6px rgba(253,186,116,1)) drop-shadow(0 0 12px rgba(249,115,22,.55));
+      animation: hdr-sparkle 2.1s var(--ease-inout) infinite;
     }
     .hdr-sparkles i:nth-child(1)  { left: 3%;    top: -8px;    animation-delay: 0s;   }
     .hdr-sparkles i:nth-child(2)  { left: 17%;   bottom: -9px; animation-delay: .7s;  width: 11px; height: 11px; }
-    .hdr-sparkles i:nth-child(3)  { left: 32%;   top: -11px;   animation-delay: 1.3s; width: 20px; height: 20px; }
+    .hdr-sparkles i:nth-child(3)  { left: 32%;   top: -11px;   animation-delay: 1.3s; width: 19px; height: 19px; }
     .hdr-sparkles i:nth-child(4)  { left: 47%;   bottom: -8px; animation-delay: .35s; }
     .hdr-sparkles i:nth-child(5)  { left: 61%;   top: -10px;   animation-delay: 1.6s; width: 13px; height: 13px; }
-    .hdr-sparkles i:nth-child(6)  { left: 76%;   bottom: -9px; animation-delay: .95s; width: 18px; height: 18px; }
+    .hdr-sparkles i:nth-child(6)  { left: 76%;   bottom: -9px; animation-delay: .95s; width: 17px; height: 17px; }
     .hdr-sparkles i:nth-child(7)  { right: 4%;   top: -9px;    animation-delay: 1.9s; }
     .hdr-sparkles i:nth-child(8)  { right: -5px; top: 38%;     animation-delay: .55s; width: 12px; height: 12px; }
-    .hdr-sparkles i:nth-child(9)  { left: -6px;  top: 44%;     animation-delay: 1.15s; width: 14px; height: 14px; }
+    .hdr-sparkles i:nth-child(9)  { left: -6px;  top: 44%;     animation-delay: 1.15s; width: 13px; height: 13px; }
     .hdr-sparkles i:nth-child(10) { left: 89%;   top: 52%;     animation-delay: 2.1s; width: 10px; height: 10px; }
     @keyframes hdr-sparkle {
       0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
@@ -217,19 +288,13 @@
 
     @keyframes hdr-pulse-active {
       0%, 100% { box-shadow:
-        0 0 0 1px rgba(129,140,248,.28),
-        0 16px 55px -12px rgba(56,189,248,.62),
-        0 0 78px -4px rgba(34,211,238,.42); }
+        0 0 0 1px var(--accent-ring),
+        0 16px 55px -14px rgba(249,115,22,.5),
+        0 0 70px -8px rgba(249,115,22,.28); }
       50%      { box-shadow:
-        0 0 0 1px rgba(217,70,239,.38),
-        0 22px 78px -8px rgba(56,189,248,.85),
-        0 0 120px 4px rgba(34,211,238,.58); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .header-wrap::before, .header-wrap::after, .hdr-fx,
-      .hdr-sparkles i, body.has-active-pf header { animation: none; }
-      .hdr-sparkles { opacity: 0; }
+        0 0 0 1px rgba(249,115,22,.55),
+        0 22px 74px -10px rgba(249,115,22,.7),
+        0 0 110px 0 rgba(251,146,60,.4); }
     }
 
     header {
@@ -238,25 +303,32 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 14px 20px;
+      gap: var(--sp-3);
+      padding: var(--sp-4) var(--sp-5);
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: var(--r-6);
       overflow-x: auto;
-      /* permanent ambient glow so the block is always "lit" */
-      box-shadow:
-        0 0 0 1px rgba(96,165,250,.07),
-        0 10px 34px -14px rgba(59,130,246,.30),
-        0 0 46px -10px rgba(96,165,250,.16);
+      box-shadow: var(--el-2);
+      transition: box-shadow var(--dur-slow) var(--ease-out);
     }
-    body.light header {
-      box-shadow:
-        0 0 0 1px rgba(59,130,246,.08),
-        0 10px 30px -14px rgba(59,130,246,.20),
-        0 0 40px -12px rgba(96,165,250,.14);
+    body.has-active-pf header { animation: hdr-pulse-active 2.6s var(--ease-inout) infinite; }
+
+    /* Screen-edge vignette that pulses once when a new price error lands. */
+    .arrival-vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      pointer-events: none;
+      opacity: 0;
+      box-shadow: inset 0 0 140px 12px var(--accent-ring), inset 0 0 40px rgba(249,115,22,.25);
     }
-    body.has-active-pf header { animation: hdr-pulse-active 2.2s ease-in-out infinite; }
+    .arrival-vignette.fire { animation: arrival-flash 1.15s var(--ease-out); }
+    @keyframes arrival-flash {
+      0%   { opacity: 0; }
+      18%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
 
     .header-left {
       display: flex;
@@ -524,14 +596,10 @@
     @media (prefers-reduced-motion: reduce) {
       .pf-fresh-badge { animation: none; }
     }
+    /* .card.pf-card.pf-fresh rail + ring styling lives in the unified signal
+       system; here just a whisper of warm tint on the surface. */
     .card.pf-card.pf-fresh {
-      border-color: #f97316;
-      box-shadow: 0 0 0 1px #f9731633, 0 4px 20px #f9731628;
-      background: linear-gradient(135deg, var(--bg-card) 78%, #2a1a0e 100%);
-    }
-    body.light .card.pf-card.pf-fresh {
-      border-color: #ea580c;
-      background: linear-gradient(135deg, var(--bg-card) 78%, #fff7ed 100%);
+      background: linear-gradient(135deg, var(--bg-card) 82%, var(--accent-quiet) 100%);
     }
 
 
@@ -543,31 +611,25 @@
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px;
+      border-radius: var(--r-5);
+      padding: var(--sp-5);
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      box-shadow: 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45);
-      transition: border-color 0.2s, background 0.2s, box-shadow 0.25s, transform 0.25s;
+      gap: var(--sp-3);
+      box-shadow: var(--el-2);
+      transition: border-color var(--dur-base) var(--ease-out),
+                  box-shadow var(--dur-base) var(--ease-out),
+                  transform var(--dur-base) var(--ease-out);
+      /* skip layout/paint for cards scrolled out of view */
+      content-visibility: auto;
+      contain-intrinsic-size: auto 340px;
     }
-    body.light .card {
-      box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18);
-    }
-    /* Only genuinely new cards fade+scale in — cards that just moved to a
-       new grid position are animated via a JS-driven FLIP transform
-       instead, so they slide rather than flicker back in. */
-    .card.card-entering { animation: cardIn 0.35s ease both; }
-    @media (prefers-reduced-motion: reduce) {
-      .card.card-entering { animation: none; }
-    }
+    /* Only genuinely new cards fade+scale in — moved cards use a JS FLIP. */
+    .card.card-entering { animation: cardIn var(--dur-slow) var(--ease-out) both; }
     .card:hover {
       border-color: var(--border-hover);
       transform: translateY(-3px);
-      box-shadow: 0 4px 10px rgba(0,0,0,.3), 0 20px 40px -16px rgba(0,0,0,.55);
-    }
-    body.light .card:hover {
-      box-shadow: 0 4px 10px rgba(15,23,42,.08), 0 20px 40px -18px rgba(15,23,42,.22);
+      box-shadow: var(--el-3);
     }
 
     .card.expired {
@@ -607,31 +669,27 @@
       pointer-events: none;
     }
 
-    .card.source-new {
-      border-left: 3px solid #3b82f6;
+    /* ===== Unified card signal system =====
+       One quiet blue rail for every "notable" state, a green rail for
+       just-synced, and the brand-orange rail + ring reserved for an actual
+       price error. The badge row (Neu / heizt auf / viel Diskussion /
+       keyword) carries the specifics — cards never stack competing colours. */
+    .card.source-new,
+    .card.keyword-match,
+    .card.temp-spiking,
+    .card.comment-spiking,
+    .card.burning {
+      box-shadow: var(--el-2), inset 3px 0 0 #3b82f6;
     }
-
     .card.new-this-sync {
-      background: #162b1e !important;
-      border-color: #22c55e !important;
-      box-shadow: 0 0 0 1px #22c55e33, 0 4px 16px #22c55e18;
+      box-shadow: var(--el-2), inset 3px 0 0 var(--price);
     }
-    body.light .card.new-this-sync {
-      background: #edfcf2 !important;
-      border-color: #22c55e !important;
-      box-shadow: 0 0 0 1px #22c55e44, 0 4px 16px #22c55e22;
+    body.showing-new .card.source-preisfehler,
+    .card.pf-card.pf-fresh {
+      border-color: var(--accent-ring);
+      box-shadow: var(--el-2), inset 3px 0 0 var(--accent), 0 0 0 1px var(--accent-quiet);
     }
-
-    body.showing-new .card.source-preisfehler {
-      border: 1.5px solid #f97316;
-      box-shadow: 0 0 0 1px #f9731622, 0 4px 20px #f9731618;
-      background: linear-gradient(135deg, #1a1f2e 80%, #2a1a0e 100%);
-    }
-    body.showing-new.light .card.source-preisfehler {
-      border: 1.5px solid #ea580c;
-      box-shadow: 0 0 0 1px #ea580c22, 0 4px 20px #ea580c18;
-      background: linear-gradient(135deg, #ffffff 80%, #fff7ed 100%);
-    }
+    .card.expired { box-shadow: var(--el-1); }
 
     .btn-expire {
       position: absolute;
@@ -1081,20 +1139,9 @@
       white-space: nowrap;
     }
     body.light .keyword-badge { background: #ede9fe; color: #6d28d9; }
-    .card.keyword-match {
-      border-color: #7c3aed !important;
-      box-shadow: 0 0 0 1px #7c3aed33, 0 4px 16px #7c3aed18;
-    }
-    .card.temp-spiking {
-      background: #2a1a06 !important;
-      border-color: #f97316 !important;
-      box-shadow: 0 0 0 1px #f9731633, 0 4px 20px #f9731628;
-    }
-    body.light .card.temp-spiking {
-      background: #fff7ed !important;
-      border-color: #f97316 !important;
-      box-shadow: 0 0 0 1px #f9731644, 0 4px 16px #f9731622;
-    }
+
+    /* Card-level colouring for these states is handled by the unified signal
+       system above; here we only style their badges. */
     .spike-badge {
       display: inline-block;
       font-size: 0.68rem;
@@ -1105,16 +1152,6 @@
       border-radius: 5px;
       padding: 1px 6px;
       margin-bottom: 4px;
-    }
-    .card.comment-spiking {
-      background: #2a0a1e !important;
-      border-color: #ec4899 !important;
-      box-shadow: 0 0 0 1px #ec489933, 0 4px 20px #ec489928;
-    }
-    body.light .card.comment-spiking {
-      background: #fdf2f8 !important;
-      border-color: #ec4899 !important;
-      box-shadow: 0 0 0 1px #ec489944, 0 4px 16px #ec489922;
     }
     .comment-spike-badge {
       display: inline-flex;
@@ -1128,31 +1165,15 @@
       padding: 1px 6px;
       margin-bottom: 4px;
     }
-
-    /* Deals over 200° get a pulsing fire glow instead of a static badge —
-       the temperature itself is the signal, not a trend. */
-    @keyframes cardBurn {
-      0%, 100% {
-        border-color: #ef4444;
-        box-shadow: 0 0 0 1px #ef444455, 0 4px 22px #ef444440, 0 0 32px #f9731630;
-      }
-      50% {
-        border-color: #f97316;
-        box-shadow: 0 0 0 1px #f9731670, 0 6px 30px #f9731660, 0 0 48px #ef444455;
-      }
-    }
+    /* >200° — the temperature itself is the signal: a hotter rail + a small
+       breathing glow, not a whole-card strobe. */
     .card.burning {
-      animation: cardBurn 1.8s ease-in-out infinite;
+      box-shadow: var(--el-2), inset 3px 0 0 #ef4444, 0 0 24px -6px rgba(239,68,68,.35);
+      animation: cardBurn 2.4s var(--ease-inout) infinite;
     }
-    body.light .card.burning {
-      background: #fff1ee !important;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .card.burning {
-        animation: none;
-        border-color: #ef4444;
-        box-shadow: 0 0 0 1px #ef444455, 0 4px 22px #ef444440, 0 0 32px #f9731630;
-      }
+    @keyframes cardBurn {
+      0%, 100% { box-shadow: var(--el-2), inset 3px 0 0 #ef4444, 0 0 22px -8px rgba(239,68,68,.3); }
+      50%      { box-shadow: var(--el-2), inset 3px 0 0 #f97316, 0 0 34px -4px rgba(249,115,22,.45); }
     }
 
     .updated-badge {
@@ -1173,12 +1194,15 @@
 </head>
 <body>
 
+<div class="arrival-vignette" aria-hidden="true"></div>
+<div id="sr-live" aria-live="polite" role="status" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0"></div>
+
 <div class="header-wrap">
 <div class="hdr-fx" aria-hidden="true"></div>
 <div class="hdr-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 <header>
   <div class="header-left">
-    <h1>Mydealz Dashboard</h1>
+    <h1>Preisfehler&nbsp;Dashboard</h1>
     <div class="header-meta">
       <span id="sync-status">Lädt…</span>
       <span id="deploy-info" class="deploy-info"></span>
@@ -1348,6 +1372,53 @@
   const pfColumn = document.getElementById('pf-column');
   const pfColumnBody = document.getElementById('pf-column-body');
   const pfColumnCount = document.getElementById('pf-column-count');
+  const srLive = document.getElementById('sr-live');
+  const arrivalVignette = document.querySelector('.arrival-vignette');
+  const motionOK = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  // Animated counter — tweens pfColumnCount to a new value instead of snapping.
+  function setPfCount(n) {
+    const from = parseInt(pfColumnCount.textContent, 10) || 0;
+    if (from === n || !motionOK) { pfColumnCount.textContent = n; return; }
+    const start = performance.now(), dur = 420;
+    (function step(t) {
+      const k = Math.min(1, (t - start) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      pfColumnCount.textContent = Math.round(from + (n - from) * eased);
+      if (k < 1) requestAnimationFrame(step);
+    })(start);
+  }
+
+  // Choreographed "a price error just landed" moment: one screen-edge
+  // vignette pulse + a screen-reader announcement. The glow igniting orange
+  // and the count ticking up happen via has-active-pf / setPfCount.
+  const _arrivalSeen = (() => {
+    try { return new Set(JSON.parse(localStorage.getItem('arrivalSeen') || '[]')); }
+    catch { return new Set(); }
+  })();
+  function choreographArrivals(deals) {
+    const fresh = [];
+    for (const d of deals) {
+      if (d.source !== 'preisfehler' || d.is_expired) continue;
+      if (_arrivalSeen.has(d.thread_id)) continue;
+      _arrivalSeen.add(d.thread_id);
+      fresh.push(d);
+    }
+    if (!fresh.length) return;
+    let ids = Array.from(_arrivalSeen);
+    if (ids.length > 400) { ids = ids.slice(-400); _arrivalSeen.clear(); ids.forEach(x => _arrivalSeen.add(x)); }
+    localStorage.setItem('arrivalSeen', JSON.stringify(ids));
+
+    if (!hasRenderedOnce) return;   // don't fire on first paint / reload
+    srLive.textContent = fresh.length === 1
+      ? `Neuer Preisfehler: ${fresh[0].title}, ${fresh[0].price_fmt}`
+      : `${fresh.length} neue Preisfehler`;
+    if (motionOK && arrivalVignette) {
+      arrivalVignette.classList.remove('fire');
+      void arrivalVignette.offsetWidth;
+      arrivalVignette.classList.add('fire');
+    }
+  }
 
   // A preisfehler counts as "frisch reingekommen" (orange glow + Neu-Badge)
   // for this long after it was published.
@@ -1373,7 +1444,7 @@
   function refreshPfColumnState() {
     const pf = lastDeals.filter(d => d.source === 'preisfehler');
     const activeCount = pf.filter(d => !d.is_expired).length;
-    pfColumnCount.textContent = activeCount;
+    setPfCount(activeCount);
     document.body.classList.toggle('has-active-pf', activeCount > 0);
     const pfVisible = pf.filter(d => !d.is_expired || !hideExpired || isExpiredButVisible(d)).length;
     document.body.classList.toggle('pf-active', useColumn() && pfVisible > 0);
@@ -1641,7 +1712,7 @@
     const nowPfActive = columnMode && pfVisible > 0;
     document.body.classList.toggle('pf-active', nowPfActive);
     const pfActiveCount = pfDeals.filter(d => !d.is_expired).length;
-    pfColumnCount.textContent = pfActiveCount;
+    setPfCount(pfActiveCount);
     document.body.classList.toggle('has-active-pf', pfActiveCount > 0);
     if (nowPfActive && !wasPfActive && !prefersReducedMotion) {
       pfColumn.classList.remove('pf-column-entering');
@@ -1677,6 +1748,7 @@
 
     checkBrowserNotifications(deals);
     checkPreisfehlerAlerts(deals);
+    choreographArrivals(deals);
     updateStatsBar(deals);
     loadSyncStatus();
   }
@@ -1957,6 +2029,8 @@
   // load and on button click, so that path updates the UI too.
   window.addEventListener('focus', updateNotifPermissionUI);
   document.addEventListener('visibilitychange', () => {
+    // Freeze the decorative glow/sparkle animations while backgrounded.
+    document.body.classList.toggle('paused', document.hidden);
     if (!document.hidden) updateNotifPermissionUI();
   });
 
@@ -2331,6 +2405,7 @@
   // "vor X Min (Verschwindet in Y Min)" line under the clock icon
   // instead of a separate hourglass item.
   setInterval(() => {
+    if (document.hidden) return;   // nothing visible to update
     const now = Date.now();
     document.querySelectorAll('.posted-ago[data-published]').forEach(el => {
       const cardEl = el.closest('.card');

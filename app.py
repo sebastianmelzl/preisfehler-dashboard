@@ -36,7 +36,7 @@ def require_auth():
     Only enforced when DASHBOARD_PASSWORD is set, so local dev without
     the env var keeps working unauthenticated.
     """
-    if request.path == "/health":
+    if request.path in ("/health", "/manifest.webmanifest"):
         return
     password = os.environ.get("DASHBOARD_PASSWORD")
     if not password:
@@ -234,6 +234,25 @@ def run_sync_async():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/manifest.webmanifest")
+def manifest():
+    icon = (
+        "data:image/svg+xml,"
+        "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
+        "%3Crect width='32' height='32' rx='7' fill='%230f1117'/%3E"
+        "%3Cpath d='M17.5 4 8 18h7l-1.5 10L24 13h-7z' fill='%23f97316'/%3E%3C/svg%3E"
+    )
+    return jsonify({
+        "name": "Preisfehler Dashboard",
+        "short_name": "Preisfehler",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#0f1117",
+        "theme_color": "#0f1117",
+        "icons": [{"src": icon, "sizes": "any", "type": "image/svg+xml", "purpose": "any"}],
+    })
 
 
 @app.route("/api/deals")
