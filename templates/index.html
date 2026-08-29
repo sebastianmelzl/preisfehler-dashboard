@@ -2106,12 +2106,12 @@
     const threadId = btn.dataset.id;
     await fetch(`/api/deals/${threadId}/expire`, {method: 'POST'});
     const card = btn.closest('.card');
-    card.classList.add('expired');
-    card.classList.remove('expired-grace');
-    card.removeAttribute('data-expires');
+    // Manual dismissal → the card really goes away (not greyed). Only
+    // genuinely expired / moderated deals get the greyed treatment.
     btn.remove();
-    const d = lastDeals.find(x => String(x.thread_id) === String(threadId));
-    if (d) { d.is_expired = 1; d.manually_expired = 1; }
+    card.classList.add('fading-out');
+    setTimeout(() => card.remove(), 800);
+    lastDeals = lastDeals.filter(x => String(x.thread_id) !== String(threadId));
     updateStatsBar(lastDeals);
     refreshPfColumnState();
   });

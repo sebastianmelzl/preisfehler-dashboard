@@ -469,18 +469,22 @@ def get_all_deals(include_new=False):
             grace_cutoff = now - (31 * 60)
             rows = conn.execute(
                 """SELECT * FROM deals
-                   WHERE source = 'preisfehler'
-                      OR (source = 'new' AND (
-                            (is_hot = 0 AND published_at >= %s)
-                            OR (is_hot = 1 AND published_at >= %s)
-                            OR (is_expired = 1 AND expired_at >= %s)
-                          ))
+                   WHERE manually_expired = 0
+                     AND (
+                       source = 'preisfehler'
+                       OR (source = 'new' AND (
+                             (is_hot = 0 AND published_at >= %s)
+                             OR (is_hot = 1 AND published_at >= %s)
+                             OR (is_expired = 1 AND expired_at >= %s)
+                           ))
+                     )
                    ORDER BY published_at DESC""",
                 (cutoff, hot_cutoff, grace_cutoff),
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT * FROM deals WHERE source = 'preisfehler' ORDER BY published_at DESC"
+                "SELECT * FROM deals WHERE source = 'preisfehler' AND manually_expired = 0 "
+                "ORDER BY published_at DESC"
             ).fetchall()
     return [dict(r) for r in rows]
 
