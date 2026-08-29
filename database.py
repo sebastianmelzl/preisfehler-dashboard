@@ -317,13 +317,12 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
 
 
 def mark_expired(thread_id):
-    now = int(time.time())
+    # Manual dismissal — no expired_at stamp, so it doesn't get the grace
+    # window an auto-expiring deal gets. The user said "hide this".
     with get_conn() as conn:
         conn.execute(
-            """UPDATE deals SET is_expired=1, manually_expired=1,
-               expired_at = CASE WHEN expired_at = 0 THEN %s ELSE expired_at END
-               WHERE thread_id=%s""",
-            (now, thread_id),
+            "UPDATE deals SET is_expired=1, manually_expired=1 WHERE thread_id=%s",
+            (thread_id,),
         )
 
 

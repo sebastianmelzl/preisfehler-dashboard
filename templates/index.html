@@ -1184,7 +1184,18 @@
   // it like any other expired deal.
   function isExpiredButVisible(d) {
     if (!d.is_expired || !d.expired_at) return false;
+    if (d.manually_expired) return false;   // dismissed by the user — stay gone
     return d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000 > Date.now();
+  }
+
+  // Recompute the column's count + collapsed state from lastDeals. Call
+  // after anything that changes a preisfehler's expiry without a full
+  // re-render (e.g. the manual X button).
+  function refreshPfColumnState() {
+    const pf = lastDeals.filter(d => d.source === 'preisfehler');
+    pfColumnCount.textContent = pf.filter(d => !d.is_expired).length;
+    const pfVisible = pf.filter(d => !d.is_expired || !hideExpired || isExpiredButVisible(d)).length;
+    document.body.classList.toggle('pf-active', useColumn() && pfVisible > 0);
   }
 
   let nextSyncTime = null;
@@ -2096,10 +2107,13 @@
     await fetch(`/api/deals/${threadId}/expire`, {method: 'POST'});
     const card = btn.closest('.card');
     card.classList.add('expired');
+    card.classList.remove('expired-grace');
+    card.removeAttribute('data-expires');
     btn.remove();
     const d = lastDeals.find(x => String(x.thread_id) === String(threadId));
-    if (d) d.is_expired = 1;
+    if (d) { d.is_expired = 1; d.manually_expired = 1; }
     updateStatsBar(lastDeals);
+    refreshPfColumnState();
   });
 
   function fmtAgo(secs) {
@@ -2192,11 +2206,7 @@
     document.getElementById('expiredLabel').textContent = hideExpired ? 'Abgelaufene anzeigen' : 'Abgelaufene ausblenden';
     // A column holding only expired preisfehler should collapse once they're
     // hidden — re-evaluate whenever the toggle flips.
-    if (lastDeals.length) {
-      const pf = lastDeals.filter(d => d.source === 'preisfehler');
-      const pfVisible = pf.filter(d => !d.is_expired || !hideExpired || isExpiredButVisible(d)).length;
-      document.body.classList.toggle('pf-active', useColumn() && pfVisible > 0);
-    }
+    if (lastDeals.length) refreshPfColumnState();
   }
 
   btnToggle.addEventListener('click', () => {
