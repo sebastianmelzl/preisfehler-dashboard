@@ -73,7 +73,9 @@ def init_db():
                 edit_checked              INTEGER DEFAULT 0,
                 comment_count             INTEGER DEFAULT 0,
                 comment_count_updated_at  INTEGER DEFAULT 0,
-                comment_spike_at          INTEGER DEFAULT 0
+                comment_spike_at          INTEGER DEFAULT 0,
+                status_checked_at         INTEGER DEFAULT 0,
+                moderation_removed        INTEGER DEFAULT 0
             )
         """)
         conn.execute("""
@@ -136,6 +138,8 @@ def init_db():
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS comment_count INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS comment_count_updated_at INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS comment_spike_at INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS status_checked_at INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS moderation_removed INTEGER DEFAULT 0",
         ]:
             conn.execute(col_sql)
     logger.info("Database initialised")
@@ -306,6 +310,54 @@ def mark_expired(thread_id):
         conn.execute(
             "UPDATE deals SET is_expired=1, manually_expired=1 WHERE thread_id=%s", (thread_id,)
         )
+
+
+def mark_auto_expired(thread_id, moderation_removed=False):
+    """Expire a deal we discovered is gone/expired by re-checking its thread
+    page (not via manual action, not via the search API). Left un-flagged as
+    manually_expired so it isn't confused with a user click."""
+    with get_conn() as conn:
+        conn.execute(
+            """UPDATE deals
+               SET is_expired=1, moderation_removed=%s, status_checked_at=%s
+               WHERE thread_id=%s""",
+            (1 if moderation_removed else 0, int(time.time()), thread_id),
+        )
+
+
+def touch_status_check(thread_ids):
+    """Mark deals as freshly status-checked so they drop to the back of the
+    re-check queue."""
+    if not thread_ids:
+        return
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE deals SET status_checked_at=%s WHERE thread_id = ANY(%s)",
+            (int(time.time()), list(thread_ids)),
+        )
+
+
+def get_preisfehler_needing_status_check(exclude_ids, min_age_seconds=1800,
+                                         recheck_after_seconds=3600, limit=8):
+    """Active preisfehler deals that are NOT in the current search fetch (so
+    we can't tell from the API whether they're still live), old enough to be
+    worth checking, and not checked recently — least-recently-checked first."""
+    now = int(time.time())
+    with get_conn() as conn:
+        rows = conn.execute(
+            """SELECT thread_id, url FROM deals
+               WHERE source = 'preisfehler'
+                 AND is_expired = 0
+                 AND manually_expired = 0
+                 AND NOT (thread_id = ANY(%s))
+                 AND published_at < %s
+                 AND status_checked_at < %s
+               ORDER BY status_checked_at ASC
+               LIMIT %s""",
+            (list(exclude_ids) or [""], now - min_age_seconds,
+             now - recheck_after_seconds, limit),
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def mark_edit_checked(thread_id, is_edited):

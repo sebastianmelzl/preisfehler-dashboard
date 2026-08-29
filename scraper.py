@@ -204,6 +204,44 @@ def has_thread_update(url, timeout=10):
         return False
 
 
+def check_deal_status(url, timeout=12):
+    """Ask the thread page directly whether a deal is still live.
+
+    mydealz removes a deal that moderation deactivates entirely — the thread
+    URL then answers 404/410 ("gone"). A deal that merely expired the normal
+    way keeps a reachable 200 page with "isExpired":true embedded in it.
+    Deals that fall off the search API are otherwise indistinguishable from
+    live ones, so this is the only way to tell a moderated/expired deal from
+    one that's just old.
+
+    Returns 'gone', 'expired', 'active', or 'unknown' (network error).
+    """
+    try:
+        sess = _get_session()
+        resp = sess.get(
+            url,
+            headers={"Accept": "text/html"},
+            timeout=timeout,
+            allow_redirects=True,
+        )
+        if resp.status_code in (404, 410):
+            return "gone"
+        if resp.status_code >= 400:
+            return "unknown"
+        # Look for the deal's own isExpired flag. The thread object is the
+        # first "isExpired" occurrence in the page; "similar deals" blocks
+        # come later, so checking only the first keeps it specific.
+        idx = resp.text.find('"isExpired"')
+        if idx != -1:
+            snippet = resp.text[idx:idx + 40]
+            if "true" in snippet:
+                return "expired"
+        return "active"
+    except Exception as e:
+        logger.warning("check_deal_status failed for %s: %s", url, e)
+        return "unknown"
+
+
 def discount_pct(price, next_best):
     if next_best and next_best > 0 and price is not None and price < next_best:
         return round((next_best - price) / next_best * 100)

@@ -111,6 +111,26 @@ def run_sync():
         for row in db.get_deals_needing_edit_check():
             db.mark_edit_checked(row["thread_id"], scraper.has_thread_update(row["url"]))
 
+        # Moderation / expiry re-check: a preisfehler that moderation
+        # deactivates drops out of the search API entirely and its thread URL
+        # starts answering 404/410. Deals still in the fetch are provably
+        # live; for a small batch of the rest, hit the thread page directly
+        # and grey out any that are gone or have expired.
+        try:
+            fetched_ids = [d["thread_id"] for d in normalised]
+            db.touch_status_check(fetched_ids)
+            for row in db.get_preisfehler_needing_status_check(fetched_ids, limit=8):
+                status = scraper.check_deal_status(row["url"])
+                if status == "gone":
+                    db.mark_auto_expired(row["thread_id"], moderation_removed=True)
+                elif status == "expired":
+                    db.mark_auto_expired(row["thread_id"], moderation_removed=False)
+                elif status == "active":
+                    db.touch_status_check([row["thread_id"]])
+                # "unknown" (network error): leave it for the next sync
+        except Exception as e:
+            logger.warning("Preisfehler status re-check failed: %s", e)
+
         if normalised:
             db.reset_empty_sync()
         else:

@@ -210,6 +210,166 @@
       gap: 16px;
     }
 
+    /* ---------- Preisfehler side column ---------- */
+    /* Grid + Preisfehler-Spalte liegen nebeneinander. Ohne aktiven
+       Preisfehler ist die Spalte eingeklappt und das Grid zentriert sich
+       wie gehabt auf 1100px; kommt ein Preisfehler rein, weitet sich das
+       Layout und die bestehende FLIP-Animation gleitet die Grid-Karten
+       nach rechts. */
+    .main-layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    body.pf-active .main-layout { max-width: 1360px; }
+    .main-layout > .grid { flex: 1; min-width: 0; margin: 0; }
+
+    #pf-column {
+      flex: 0 0 244px;
+      align-self: flex-start;
+      position: sticky;
+      top: 16px;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 32px);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45);
+    }
+    body.light #pf-column {
+      box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18);
+    }
+    body:not(.pf-active) #pf-column { display: none; }
+
+    @keyframes pfColumnIn {
+      from { opacity: 0; transform: translateX(-24px); }
+      to   { opacity: 1; transform: none; }
+    }
+    #pf-column.pf-column-entering {
+      animation: pfColumnIn 0.4s cubic-bezier(0.2, 0, 0.2, 1) both;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #pf-column.pf-column-entering { animation: none; }
+    }
+
+    .pf-column-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, transparent, #f9731618);
+      flex-shrink: 0;
+    }
+    .pf-column-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #f97316;
+    }
+    .pf-column-title svg { width: 14px; height: 14px; display: block; }
+    body.light .pf-column-title { color: #ea580c; }
+    .pf-column-count {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+      background: var(--bg-input);
+      border-radius: 6px;
+      padding: 1px 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .pf-column-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    /* Compact card variant used inside the column. Selectors are scoped as
+       .card.pf-card so they outweigh the base .card rules that appear later
+       in this stylesheet. */
+    .card.pf-card {
+      padding: 12px;
+      gap: 7px;
+      border-radius: 11px;
+    }
+    .card.pf-card:hover { transform: none; }
+    .pf-card .title { font-size: 0.82rem; line-height: 1.3; }
+    .pf-card .title a { -webkit-line-clamp: 2; }
+    .pf-card .price-row { gap: 6px; }
+    .pf-card .price-current { font-size: 1.35rem; }
+    .pf-card .price-orig { font-size: 0.75rem; }
+    .pf-card .discount { font-size: 0.8rem; padding: 2px 7px; }
+    .pf-card .shop-link { margin-top: 4px; padding: 3px 8px; font-size: 0.72rem; }
+    .pf-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 0.72rem;
+      color: var(--text-faint);
+    }
+    .pf-meta > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pf-fresh-badge {
+      display: inline-flex;
+      align-items: center;
+      align-self: flex-start;
+      gap: 3px;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #fb923c;
+      background: #f9731622;
+      border: 1px solid #f9731644;
+      border-radius: 5px;
+      padding: 1px 6px;
+      animation: pfBadgePulse 1.6s ease-in-out infinite;
+    }
+    .pf-fresh-badge .card-icon { margin-right: 0; }
+    @keyframes pfBadgePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @media (prefers-reduced-motion: reduce) {
+      .pf-fresh-badge { animation: none; }
+    }
+    .card.pf-card.pf-fresh {
+      border-color: #f97316;
+      box-shadow: 0 0 0 1px #f9731633, 0 4px 20px #f9731628;
+      background: linear-gradient(135deg, var(--bg-card) 78%, #2a1a0e 100%);
+    }
+    body.light .card.pf-card.pf-fresh {
+      border-color: #ea580c;
+      background: linear-gradient(135deg, var(--bg-card) 78%, #fff7ed 100%);
+    }
+
+    @media (max-width: 900px) {
+      .main-layout, body.pf-active .main-layout {
+        display: block;
+        max-width: 1100px;
+      }
+      #pf-column { display: none !important; }
+    }
+
     @keyframes cardIn {
       from { opacity: 0; transform: scale(0.98); }
       to { opacity: 1; transform: scale(1); }
@@ -990,7 +1150,19 @@
   {% endfor %}
 </div>
 <div id="error-msg">Fehler beim Laden der Deals.</div>
-<div class="grid" id="grid" style="display:none"></div>
+<div class="main-layout">
+  <aside id="pf-column" aria-label="Aktive Preisfehler">
+    <div class="pf-column-head">
+      <span class="pf-column-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Preisfehler
+      </span>
+      <span class="pf-column-count" id="pf-column-count">0</span>
+    </div>
+    <div class="pf-column-body" id="pf-column-body"></div>
+  </aside>
+  <div class="grid" id="grid" style="display:none"></div>
+</div>
 
 <script>
   const grid = document.getElementById('grid');
@@ -1000,6 +1172,13 @@
   const deployInfo = document.getElementById('deploy-info');
   const syncCountdown = document.getElementById('sync-countdown');
   const btnSync = document.getElementById('btn-sync');
+  const pfColumn = document.getElementById('pf-column');
+  const pfColumnBody = document.getElementById('pf-column-body');
+  const pfColumnCount = document.getElementById('pf-column-count');
+
+  // A preisfehler counts as "frisch reingekommen" (orange glow + Neu-Badge)
+  // for this long after it was published.
+  const PF_FRESH_SECS = 8 * 60;
 
   let nextSyncTime = null;
   let fastPolling = false;
@@ -1073,7 +1252,7 @@
     const hot = d.is_hot;
     const isNew = d.source === 'new';
     const badge = expired
-      ? '<span class="badge badge-expired">Abgelaufen</span>'
+      ? `<span class="badge badge-expired">${d.moderation_removed ? 'Deaktiviert' : 'Abgelaufen'}</span>`
       : d.is_new_this_sync
         ? `<span class="badge badge-new"><span class="card-icon">${ICON_ZAP}</span>Neu</span>`
         : hot
@@ -1140,37 +1319,74 @@
     return tmp.firstElementChild;
   }
 
+  function useColumn() {
+    return window.matchMedia('(min-width: 901px)').matches;
+  }
+
+  // Compact card for the left preisfehler column.
+  function buildPfCardHtml(d, fresh) {
+    const expired = d.is_expired;
+    const origPrice = d.next_best_fmt
+      ? `<span class="price-orig">${d.next_best_fmt}</span>` : '';
+    const disc = d.discount_pct
+      ? `<span class="discount">-${d.discount_pct}%</span>` : '';
+    return `
+      <div class="card pf-card${expired ? ' expired' : ''}${fresh ? ' pf-fresh' : ''}" data-thread-id="${d.thread_id}">
+        ${fresh ? `<span class="pf-fresh-badge"><span class="card-icon">${ICON_ZAP}</span>Neu</span>` : ''}
+        ${expired ? `<span class="badge badge-expired" style="align-self:flex-start">${d.moderation_removed ? 'Deaktiviert' : 'Abgelaufen'}</span>` : ''}
+        ${!expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
+        <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
+        <div class="price-row">
+          <span class="price-current">${d.price_fmt}</span>
+          ${origPrice}${disc}
+        </div>
+        <div class="pf-meta">
+          <span><span class="card-icon">${ICON_SHOPPING_BAG}</span>${esc(d.merchant)}</span>
+          ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at, null)}</span>` : ''}
+        </div>
+        ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener"><span class="card-icon">${ICON_EXTERNAL_LINK}</span>${esc(d.link_host)}</a>` : ''}
+      </div>`;
+  }
+
   function renderDeals(deals) {
     lastDeals = deals;
     loading.style.display = 'none';
+    const columnMode = useColumn();
+
     if (!deals.length) {
       grid.innerHTML = '<p style="color:#64748b;grid-column:1/-1;text-align:center">Keine Deals gefunden.</p>';
       grid.style.display = 'grid';
+      pfColumnBody.innerHTML = '';
+      document.body.classList.remove('pf-active');
       hasRenderedOnce = true;
       return;
     }
-    // Preisfehler always first, everything else sorted by creation time
-    // (published_at) within its group, newest first.
-    deals.sort((a, b) => {
-      const pfDiff = (b.source === 'preisfehler' ? 1 : 0) - (a.source === 'preisfehler' ? 1 : 0);
-      return pfDiff !== 0 ? pfDiff : (b.published_at || 0) - (a.published_at || 0);
-    });
 
-    // FLIP "First": remember where cards that already exist currently sit,
-    // keyed by thread_id, before we rebuild the grid.
+    const nowSec = Date.now() / 1000;
+    const byNewest = (a, b) => (b.published_at || 0) - (a.published_at || 0);
+
+    // Preisfehler get their own vertical column on the left (wide screens);
+    // on narrow screens they stay mixed into the grid, sorted to the front.
+    const pfDeals = deals.filter(d => d.source === 'preisfehler').sort(byNewest);
+    const otherDeals = deals.filter(d => d.source !== 'preisfehler').sort(byNewest);
+    const gridDeals = columnMode ? otherDeals : [...pfDeals, ...otherDeals];
+    const colDeals = columnMode ? pfDeals : [];
+
+    // FLIP "First": remember where every card currently sits (grid *and*
+    // column), keyed by thread_id, before we rebuild.
     const oldRects = new Map();
-    grid.querySelectorAll('.card[data-thread-id]').forEach(el => {
+    document.querySelectorAll('.card[data-thread-id]').forEach(el => {
       oldRects.set(el.dataset.threadId, el.getBoundingClientRect());
     });
 
-    const fragment = document.createDocumentFragment();
     const entries = [];
+
+    const gridFrag = document.createDocumentFragment();
     let newIdx = 0;
-    deals.forEach(d => {
+    gridDeals.forEach(d => {
       const id = String(d.thread_id);
       const isNewCard = !oldRects.has(id);
-      const editedBadge = !!d.is_edited;
-      const el = cardElementFromHtml(buildCardHtml(d, editedBadge));
+      const el = cardElementFromHtml(buildCardHtml(d, !!d.is_edited));
       if (isNewCard) {
         el.classList.add('card-entering');
         const delay = hasRenderedOnce ? Math.min(newIdx, 8) * 45 : Math.min(newIdx, 12) * 35;
@@ -1178,19 +1394,49 @@
         newIdx++;
       }
       entries.push({ el, id, isNewCard });
-      fragment.appendChild(el);
+      gridFrag.appendChild(el);
     });
 
-    // "Last": drop the rebuilt cards into the grid in their new order.
+    const colFrag = document.createDocumentFragment();
+    let colNewIdx = 0;
+    colDeals.forEach(d => {
+      const id = String(d.thread_id);
+      const isNewCard = !oldRects.has(id);
+      const fresh = !d.is_expired && d.published_at && (nowSec - d.published_at) < PF_FRESH_SECS;
+      const el = cardElementFromHtml(buildPfCardHtml(d, fresh));
+      if (isNewCard) {
+        el.classList.add('card-entering');
+        el.style.animationDelay = Math.min(colNewIdx, 8) * 45 + 'ms';
+        colNewIdx++;
+      }
+      entries.push({ el, id, isNewCard });
+      colFrag.appendChild(el);
+    });
+
+    // "Last": drop the rebuilt cards into grid + column in their new order.
     grid.innerHTML = '';
-    grid.appendChild(fragment);
+    grid.appendChild(gridFrag);
     grid.style.display = 'grid';
+    pfColumnBody.innerHTML = '';
+    pfColumnBody.appendChild(colFrag);
     hasRenderedOnce = true;
+
+    const pfVisible = pfDeals.filter(d => !d.is_expired || !hideExpired).length;
+    const wasPfActive = document.body.classList.contains('pf-active');
+    const nowPfActive = columnMode && pfVisible > 0;
+    document.body.classList.toggle('pf-active', nowPfActive);
+    pfColumnCount.textContent = pfDeals.filter(d => !d.is_expired).length;
+    if (nowPfActive && !wasPfActive && !prefersReducedMotion) {
+      pfColumn.classList.remove('pf-column-entering');
+      void pfColumn.offsetWidth;
+      pfColumn.classList.add('pf-column-entering');
+    }
 
     // "Invert" + "Play": cards that existed before get an inverse transform
     // applied immediately (so they visually stay put), then animate that
     // transform back to zero — reads as sliding to the new spot instead of
-    // popping/flickering. New cards use the fade+scale entrance instead.
+    // popping/flickering. When the column appears/disappears the grid slides
+    // sideways the same way. New cards use the fade+scale entrance instead.
     if (!prefersReducedMotion) {
       requestAnimationFrame(() => {
         entries.forEach(({ el, id, isNewCard }) => {
@@ -1267,7 +1513,7 @@
       if (s.is_running) {
         syncStatus.innerHTML = `<span class="card-icon">${ICON_HOURGLASS}</span>Läuft…`;
       } else {
-        const visible = Array.from(grid.querySelectorAll('.card:not(.fading-out)'))
+        const visible = Array.from(document.querySelectorAll('.card:not(.fading-out)'))
           .filter(c => getComputedStyle(c).display !== 'none').length;
         syncStatus.textContent = `✓ ${ts} · ${visible} sichtbar`;
       }
@@ -1877,6 +2123,16 @@
         setTimeout(() => card.remove(), 800);
       }
     });
+    // Drop the "frisch"-highlight off column cards once they age out, without
+    // waiting for the next full re-render.
+    document.querySelectorAll('.pf-card.pf-fresh').forEach(card => {
+      const span = card.querySelector('.posted-ago[data-published]');
+      if (span && (now / 1000 - parseInt(span.dataset.published)) > PF_FRESH_SECS) {
+        card.classList.remove('pf-fresh');
+        const badge = card.querySelector('.pf-fresh-badge');
+        if (badge) badge.remove();
+      }
+    });
   }, 1000);
 
   // Theme toggle
@@ -1912,6 +2168,13 @@
     btnToggle.classList.toggle('active', hideExpired);
     document.getElementById('expiredIcon').innerHTML = hideExpired ? ICON_EYE : ICON_EYE_OFF;
     document.getElementById('expiredLabel').textContent = hideExpired ? 'Abgelaufene anzeigen' : 'Abgelaufene ausblenden';
+    // A column holding only expired preisfehler should collapse once they're
+    // hidden — re-evaluate whenever the toggle flips.
+    if (lastDeals.length) {
+      const pf = lastDeals.filter(d => d.source === 'preisfehler');
+      const pfVisible = pf.filter(d => !d.is_expired || !hideExpired).length;
+      document.body.classList.toggle('pf-active', useColumn() && pfVisible > 0);
+    }
   }
 
   btnToggle.addEventListener('click', () => {
@@ -1922,6 +2185,12 @@
 
   applyToggle();
 
+
+  // Crossing the column/no-column breakpoint changes where preisfehler are
+  // rendered — re-run the last render so they move to the right place.
+  window.matchMedia('(min-width: 901px)').addEventListener('change', () => {
+    if (lastDeals.length) renderDeals(lastDeals);
+  });
 
   loadDeals();
   loadSyncStatus();
