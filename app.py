@@ -431,6 +431,48 @@ def api_tts():
             pass
 
 
+@app.route("/api/debug/inject-preisfehler", methods=["GET", "POST"])
+def api_debug_inject_preisfehler():
+    """Insert a synthetic active preisfehler so the dashboard's column
+    behaviour can be demoed. ?age_min=N backdates it (default 0 = fresh,
+    orange glow). ?expired=1 inserts it already-expired to show the grace
+    window. Remove all of them again via /api/debug/clear-test-deals."""
+    now = int(time.time())
+    age_min = int(request.args.get("age_min", 0))
+    expired = request.args.get("expired") == "1"
+    tid = f"test-{now}"
+    fake = {
+        "thread_id": tid,
+        "title": "🧪 TEST-Preisfehler – Sony WH-1000XM5 Over-Ear Kopfhörer",
+        "title_slug": "test-preisfehler",
+        "price": 4.99,
+        "next_best": 279.00,
+        "discount_pct": 98,
+        "merchant": "TestShop",
+        "category": "Kopfhörer",
+        "temperature": 240,
+        "is_expired": 1 if expired else 0,
+        "is_hot": 1,
+        "published_at": now - age_min * 60,
+        "updated_at": 0,
+        "comment_count": 4,
+        "url": "https://www.mydealz.de/",
+        "shop_url": "https://www.mydealz.de/",
+        "link_host": "amazon.de",
+    }
+    seq = db.get_sync_status().get("sync_seq", 0)
+    db.upsert_deals([fake], source="preisfehler", sync_seq=seq)
+    if expired:
+        db.mark_auto_expired(tid, moderation_removed=False)
+    return jsonify({"ok": True, "thread_id": tid, "expired": expired, "age_min": age_min})
+
+
+@app.route("/api/debug/clear-test-deals", methods=["GET", "POST"])
+def api_debug_clear_test_deals():
+    n = db.delete_deals_by_prefix("test-")
+    return jsonify({"ok": True, "deleted": n})
+
+
 @app.route("/api/debug/new-deals")
 def api_debug_new_deals():
     try:

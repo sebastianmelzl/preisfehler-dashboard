@@ -431,6 +431,15 @@ def update_availability(thread_id, status):
         )
 
 
+def delete_deals_by_prefix(prefix):
+    """Remove synthetic debug deals (thread_id LIKE 'prefix%')."""
+    with get_conn() as conn:
+        cur = conn.execute(
+            "DELETE FROM deals WHERE thread_id LIKE %s", (prefix + "%",)
+        )
+        return cur.rowcount
+
+
 def get_unnotified_deals():
     with get_conn() as conn:
         rows = conn.execute(
