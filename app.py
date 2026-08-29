@@ -111,26 +111,6 @@ def run_sync():
         for row in db.get_deals_needing_edit_check():
             db.mark_edit_checked(row["thread_id"], scraper.has_thread_update(row["url"]))
 
-        # Moderation / expiry re-check: a preisfehler that moderation
-        # deactivates drops out of the search API entirely and its thread URL
-        # starts answering 404/410. Deals still in the fetch are provably
-        # live; for a small batch of the rest, hit the thread page directly
-        # and grey out any that are gone or have expired.
-        try:
-            fetched_ids = [d["thread_id"] for d in normalised]
-            db.touch_status_check(fetched_ids)
-            for row in db.get_preisfehler_needing_status_check(fetched_ids, limit=8):
-                status = scraper.check_deal_status(row["url"])
-                if status == "gone":
-                    db.mark_auto_expired(row["thread_id"], moderation_removed=True)
-                elif status == "expired":
-                    db.mark_auto_expired(row["thread_id"], moderation_removed=False)
-                elif status == "active":
-                    db.touch_status_check([row["thread_id"]])
-                # "unknown" (network error): leave it for the next sync
-        except Exception as e:
-            logger.warning("Preisfehler status re-check failed: %s", e)
-
         if normalised:
             db.reset_empty_sync()
         else:
@@ -181,6 +161,36 @@ def run_sync():
             visible_new_count = db.count_visible_new_this_sync(current_seq)
         except Exception as e:
             logger.warning("New deals fetch failed: %s", e)
+
+        # Moderation / expiry re-check. A deal that moderation deactivates
+        # drops out of every mydealz listing and its thread URL starts
+        # answering 404/410; a normally-expired deal keeps a 200 page with
+        # "isExpired":true. Anything we just saw in a fetch is provably live,
+        # so skip those; for a bounded batch of the rest — active preisfehler
+        # plus any still-visible "new" deal — hit the thread page directly
+        # and grey out the ones that are gone or expired.
+        try:
+            alive_ids = [d["thread_id"] for d in normalised]
+            try:
+                alive_ids += [d["thread_id"] for d in new_normalised]
+            except NameError:
+                pass
+            db.touch_status_check(alive_ids)
+            for row in db.get_deals_needing_status_check(alive_ids, limit=12):
+                status = scraper.check_deal_status(row["url"])
+                if status == "gone":
+                    # 404/410 is unambiguous — deal pulled by moderation.
+                    db.mark_auto_expired(row["thread_id"], moderation_removed=True)
+                elif status == "expired" and row["source"] == "new":
+                    # "isExpired" parsed off the page is softer signal; only
+                    # trust it for short-lived "new" deals, never to
+                    # permanently grey a preisfehler.
+                    db.mark_auto_expired(row["thread_id"], moderation_removed=False)
+                elif status in ("active", "expired"):
+                    db.touch_status_check([row["thread_id"]])
+                # "unknown" (network error): leave it for the next sync
+        except Exception as e:
+            logger.warning("Deal status re-check failed: %s", e)
 
         # Availability check: re-verify a small batch of active preisfehler
         # deals' shop links haven't gone dead since the last check

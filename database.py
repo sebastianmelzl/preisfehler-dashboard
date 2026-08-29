@@ -337,25 +337,34 @@ def touch_status_check(thread_ids):
         )
 
 
-def get_preisfehler_needing_status_check(exclude_ids, min_age_seconds=1800,
-                                         recheck_after_seconds=3600, limit=8):
-    """Active preisfehler deals that are NOT in the current search fetch (so
-    we can't tell from the API whether they're still live), old enough to be
-    worth checking, and not checked recently — least-recently-checked first."""
+def get_deals_needing_status_check(exclude_ids, recheck_after_seconds=900, limit=12):
+    """Deals we can't confirm live from the current fetch and haven't
+    re-checked recently — least-recently-checked first.
+
+    Covers active preisfehler (the column's content) and any "new" deal
+    that's still inside its dashboard display window, since a moderated deal
+    disappears from every listing and only a direct thread-page hit reveals
+    it. Freshly-published preisfehler (<30 min) are skipped — they're still
+    reliably in the search fetch and don't need probing yet."""
     now = int(time.time())
     with get_conn() as conn:
         rows = conn.execute(
-            """SELECT thread_id, url FROM deals
-               WHERE source = 'preisfehler'
-                 AND is_expired = 0
+            """SELECT thread_id, url, source FROM deals
+               WHERE is_expired = 0
                  AND manually_expired = 0
-                 AND NOT (thread_id = ANY(%s))
-                 AND published_at < %s
                  AND status_checked_at < %s
+                 AND NOT (thread_id = ANY(%s))
+                 AND (
+                       (source = 'preisfehler' AND published_at < %s)
+                       OR (source = 'new' AND (
+                             (is_hot = 0 AND published_at >= %s)
+                             OR (is_hot = 1 AND published_at >= %s)
+                       ))
+                 )
                ORDER BY status_checked_at ASC
                LIMIT %s""",
-            (list(exclude_ids) or [""], now - min_age_seconds,
-             now - recheck_after_seconds, limit),
+            (now - recheck_after_seconds, list(exclude_ids) or [""],
+             now - 1800, now - 2400, now - 3600, limit),
         ).fetchall()
     return [dict(r) for r in rows]
 
