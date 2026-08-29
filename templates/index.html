@@ -85,49 +85,42 @@
       isolation: isolate;
     }
 
-    /* Soft, colourful outer bloom that drifts around the block. The conic
-       gradient starts and ends on the same colour so there is no hard seam
-       travelling with it, and the bright part fades in/out over a wide arc
-       so the leading edge is gentle rather than sharp. */
-    .header-wrap::before {
+    /* Travelling light: ONE uniform bright arc (flat plateau, soft symmetric
+       edges) riding a faint always-lit ring. Seamless 0/360 join and a rigid
+       conic that just rotates, so the band keeps a constant shape + speed. */
+    .header-wrap::before {                       /* outer bloom */
       content: "";
       position: absolute;
       inset: -5px;
       border-radius: 22px;
       background: conic-gradient(from var(--hdr-angle),
-        rgba(129,140,248,.10) 0deg,
-        rgba(129,140,248,.10) 70deg,
-        rgba(192,132,252,.30) 140deg,
-        rgba(56,189,248,.55) 220deg,
-        rgba(34,211,238,.80) 280deg,
-        rgba(240,251,255,.95) 312deg,
-        rgba(45,212,191,.70) 340deg,
-        rgba(129,140,248,.30) 355deg,
-        rgba(129,140,248,.10) 360deg);
-      filter: blur(20px);
-      opacity: .82;
+        rgba(96,165,250,.16) 0deg,
+        rgba(96,165,250,.16) 250deg,
+        rgba(103,232,249,.90) 280deg,
+        rgba(103,232,249,.90) 320deg,
+        rgba(96,165,250,.16) 350deg,
+        rgba(96,165,250,.16) 360deg);
+      filter: blur(19px);
+      opacity: .8;
       z-index: -2;
       pointer-events: none;
-      animation: hdr-rotate 6.5s linear infinite;
+      animation: hdr-rotate 6s linear infinite;
     }
-    body.light .header-wrap::before { opacity: .52; }
+    body.light .header-wrap::before { opacity: .5; }
 
-    /* Gentle definition ring — thin, long soft ramps, seamless 0/360 join. */
-    .header-wrap::after {
+    .header-wrap::after {                        /* 1.5px definition ring */
       content: "";
       position: absolute;
       inset: -1px;
       border-radius: inherit;
       padding: 1.5px;
       background: conic-gradient(from var(--hdr-angle),
-        rgba(148,163,184,.20) 0deg,
-        rgba(148,163,184,.20) 110deg,
-        rgba(192,132,252,.45) 185deg,
-        rgba(56,189,248,.80) 250deg,
-        rgba(224,247,255,1) 300deg,
-        rgba(45,212,191,.80) 332deg,
-        rgba(129,140,248,.45) 352deg,
-        rgba(148,163,184,.20) 360deg);
+        rgba(148,163,184,.22) 0deg,
+        rgba(148,163,184,.22) 248deg,
+        rgba(224,247,255,1) 282deg,
+        rgba(224,247,255,1) 318deg,
+        rgba(148,163,184,.22) 352deg,
+        rgba(148,163,184,.22) 360deg);
       -webkit-mask:
         linear-gradient(#000 0 0) content-box,
         linear-gradient(#000 0 0);
@@ -135,38 +128,59 @@
               mask-composite: exclude;
       z-index: -1;
       pointer-events: none;
-      animation: hdr-rotate 6.5s linear infinite;
+      animation: hdr-rotate 6s linear infinite;
     }
 
-    /* Second, counter-rotating multi-colour comet — only lit when there's an
-       active preisfehler, for a "something's happening" burst. */
+    /* ---- Active preisfehler: crank everything way up ---- */
+    body.has-active-pf .header-wrap::before {
+      inset: -14px;
+      border-radius: 30px;
+      opacity: 1;
+      filter: blur(28px) saturate(1.8) brightness(1.35);
+      animation-duration: 2.2s;
+      background: conic-gradient(from var(--hdr-angle),
+        rgba(129,140,248,.34) 0deg,
+        rgba(129,140,248,.34) 234deg,
+        rgba(217,70,239,.95) 262deg,
+        rgba(56,189,248,1) 292deg,
+        rgba(45,212,191,.98) 322deg,
+        rgba(129,140,248,.34) 350deg,
+        rgba(129,140,248,.34) 360deg);
+    }
+    body.has-active-pf .header-wrap::after {
+      inset: -1.5px;
+      padding: 2.5px;
+      animation-duration: 2.2s;
+      filter: brightness(1.25) saturate(1.5) drop-shadow(0 0 7px rgba(56,189,248,.95));
+    }
+
+    /* Second, counter-rotating multi-colour comet — active only. */
     .hdr-fx {
       position: absolute;
-      inset: -7px;
-      border-radius: 24px;
+      inset: -16px;
+      border-radius: 30px;
       pointer-events: none;
       z-index: -3;
       opacity: 0;
-      transition: opacity .55s ease;
+      transition: opacity .5s ease;
       background: conic-gradient(from var(--hdr-angle2),
         transparent 0deg,
-        rgba(244,114,182,.0) 25deg,
-        rgba(244,114,182,.50) 110deg,
-        rgba(250,204,21,.55) 185deg,
-        rgba(52,211,153,.60) 255deg,
-        rgba(56,189,248,.75) 312deg,
-        rgba(255,255,255,.92) 338deg,
-        rgba(244,114,182,.30) 356deg,
+        transparent 190deg,
+        rgba(244,114,182,.75) 240deg,
+        rgba(250,204,21,.75) 278deg,
+        rgba(52,211,153,.85) 312deg,
+        rgba(255,255,255,.98) 338deg,
+        rgba(244,114,182,.4) 356deg,
         transparent 360deg);
-      filter: blur(24px);
-      animation: hdr-rotate2 8s linear infinite;
+      filter: blur(28px);
+      animation: hdr-rotate2 4.5s linear infinite;
     }
-    body.has-active-pf .hdr-fx { opacity: .9; }
+    body.has-active-pf .hdr-fx { opacity: 1; }
 
-    /* Twinkling sparkles around the perimeter — active-preisfehler only. */
+    /* Twinkling sparkles around the perimeter — active only. */
     .hdr-sparkles {
       position: absolute;
-      inset: -12px;
+      inset: -16px;
       pointer-events: none;
       z-index: 3;
       opacity: 0;
@@ -175,39 +189,41 @@
     body.has-active-pf .hdr-sparkles { opacity: 1; }
     .hdr-sparkles i {
       position: absolute;
-      width: 13px;
-      height: 13px;
+      width: 16px;
+      height: 16px;
       display: block;
-      background: radial-gradient(circle, #fff 0%, #e0f2fe 38%, #7dd3fc 64%, transparent 72%);
+      background: radial-gradient(circle, #fff 0%, #e0f2fe 34%, #7dd3fc 60%, transparent 70%);
       clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
       opacity: 0;
       transform: scale(0);
-      filter: drop-shadow(0 0 5px rgba(125,211,252,.95));
-      animation: hdr-sparkle 2.8s ease-in-out infinite;
+      filter: drop-shadow(0 0 6px rgba(125,211,252,1)) drop-shadow(0 0 12px rgba(217,70,239,.5));
+      animation: hdr-sparkle 2s ease-in-out infinite;
     }
-    .hdr-sparkles i:nth-child(1) { left: 4%;   top: -6px;    animation-delay: 0s;    }
-    .hdr-sparkles i:nth-child(2) { left: 22%;  bottom: -7px; animation-delay: .9s;   width: 9px;  height: 9px; }
-    .hdr-sparkles i:nth-child(3) { left: 45%;  top: -9px;    animation-delay: 1.7s;  width: 16px; height: 16px; }
-    .hdr-sparkles i:nth-child(4) { left: 63%;  bottom: -6px; animation-delay: .45s;  }
-    .hdr-sparkles i:nth-child(5) { right: 7%;  top: -8px;    animation-delay: 2.2s;  width: 11px; height: 11px; }
-    .hdr-sparkles i:nth-child(6) { right: -3px; top: 40%;    animation-delay: 1.2s;  width: 10px; height: 10px; }
-    .hdr-sparkles i:nth-child(7) { left: -4px; top: 46%;     animation-delay: 2.6s;  }
-    .hdr-sparkles i:nth-child(8) { left: 33%;  top: 55%;     animation-delay: .3s;   width: 8px;  height: 8px; }
+    .hdr-sparkles i:nth-child(1)  { left: 3%;    top: -8px;    animation-delay: 0s;   }
+    .hdr-sparkles i:nth-child(2)  { left: 17%;   bottom: -9px; animation-delay: .7s;  width: 11px; height: 11px; }
+    .hdr-sparkles i:nth-child(3)  { left: 32%;   top: -11px;   animation-delay: 1.3s; width: 20px; height: 20px; }
+    .hdr-sparkles i:nth-child(4)  { left: 47%;   bottom: -8px; animation-delay: .35s; }
+    .hdr-sparkles i:nth-child(5)  { left: 61%;   top: -10px;   animation-delay: 1.6s; width: 13px; height: 13px; }
+    .hdr-sparkles i:nth-child(6)  { left: 76%;   bottom: -9px; animation-delay: .95s; width: 18px; height: 18px; }
+    .hdr-sparkles i:nth-child(7)  { right: 4%;   top: -9px;    animation-delay: 1.9s; }
+    .hdr-sparkles i:nth-child(8)  { right: -5px; top: 38%;     animation-delay: .55s; width: 12px; height: 12px; }
+    .hdr-sparkles i:nth-child(9)  { left: -6px;  top: 44%;     animation-delay: 1.15s; width: 14px; height: 14px; }
+    .hdr-sparkles i:nth-child(10) { left: 89%;   top: 52%;     animation-delay: 2.1s; width: 10px; height: 10px; }
     @keyframes hdr-sparkle {
       0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
-      42%      { opacity: 1; transform: scale(1.05) rotate(70deg); }
-      68%      { opacity: .3; transform: scale(.6) rotate(120deg); }
+      40%      { opacity: 1; transform: scale(1.1) rotate(80deg); }
+      70%      { opacity: .25; transform: scale(.55) rotate(130deg); }
     }
 
-    @keyframes hdr-pulse {
+    @keyframes hdr-pulse-active {
       0%, 100% { box-shadow:
-        0 0 0 1px rgba(96,165,250,.10),
-        0 12px 40px -14px rgba(56,189,248,.42),
-        0 0 52px -8px rgba(34,211,238,.24); }
+        0 0 0 1px rgba(129,140,248,.28),
+        0 16px 55px -12px rgba(56,189,248,.62),
+        0 0 78px -4px rgba(34,211,238,.42); }
       50%      { box-shadow:
-        0 0 0 1px rgba(129,140,248,.18),
-        0 14px 50px -12px rgba(56,189,248,.58),
-        0 0 70px -6px rgba(34,211,238,.36); }
+        0 0 0 1px rgba(217,70,239,.38),
+        0 22px 78px -8px rgba(56,189,248,.85),
+        0 0 120px 4px rgba(34,211,238,.58); }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -240,7 +256,7 @@
         0 10px 30px -14px rgba(59,130,246,.20),
         0 0 40px -12px rgba(96,165,250,.14);
     }
-    body.has-active-pf header { animation: hdr-pulse 2.8s ease-in-out infinite; }
+    body.has-active-pf header { animation: hdr-pulse-active 2.2s ease-in-out infinite; }
 
     .header-left {
       display: flex;
@@ -1159,7 +1175,7 @@
 
 <div class="header-wrap">
 <div class="hdr-fx" aria-hidden="true"></div>
-<div class="hdr-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div class="hdr-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 <header>
   <div class="header-left">
     <h1>Mydealz Dashboard</h1>
