@@ -72,12 +72,10 @@
     }
 
     /* ---------- Header with a travelling glow ---------- */
-    @property --hdr-angle {
-      syntax: "<angle>";
-      initial-value: 0deg;
-      inherits: false;
-    }
-    @keyframes hdr-rotate { to { --hdr-angle: 360deg; } }
+    @property --hdr-angle  { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+    @property --hdr-angle2 { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+    @keyframes hdr-rotate  { to { --hdr-angle: 360deg; } }
+    @keyframes hdr-rotate2 { to { --hdr-angle2: -360deg; } }
 
     .header-wrap {
       position: relative;
@@ -87,42 +85,49 @@
       isolation: isolate;
     }
 
-    /* soft bloom that spills outside the card */
+    /* Soft, colourful outer bloom that drifts around the block. The conic
+       gradient starts and ends on the same colour so there is no hard seam
+       travelling with it, and the bright part fades in/out over a wide arc
+       so the leading edge is gentle rather than sharp. */
     .header-wrap::before {
       content: "";
       position: absolute;
-      inset: -4px;
-      border-radius: 20px;
+      inset: -5px;
+      border-radius: 22px;
       background: conic-gradient(from var(--hdr-angle),
-        transparent 0deg,
-        transparent 232deg,
-        rgba(96,165,250,.45) 296deg,
-        rgba(199,234,254,.85) 340deg,
-        rgba(103,232,249,.55) 350deg,
-        transparent 360deg);
-      filter: blur(17px);
-      opacity: .8;
+        rgba(129,140,248,.10) 0deg,
+        rgba(129,140,248,.10) 70deg,
+        rgba(192,132,252,.30) 140deg,
+        rgba(56,189,248,.55) 220deg,
+        rgba(34,211,238,.80) 280deg,
+        rgba(240,251,255,.95) 312deg,
+        rgba(45,212,191,.70) 340deg,
+        rgba(129,140,248,.30) 355deg,
+        rgba(129,140,248,.10) 360deg);
+      filter: blur(20px);
+      opacity: .82;
       z-index: -2;
       pointer-events: none;
-      animation: hdr-rotate 5.5s linear infinite;
+      animation: hdr-rotate 6.5s linear infinite;
     }
-    body.light .header-wrap::before { opacity: .5; }
+    body.light .header-wrap::before { opacity: .52; }
 
-    /* crisp 1.5px ring carrying the bright comet head */
+    /* Gentle definition ring — thin, long soft ramps, seamless 0/360 join. */
     .header-wrap::after {
       content: "";
       position: absolute;
-      inset: -1.5px;
+      inset: -1px;
       border-radius: inherit;
       padding: 1.5px;
       background: conic-gradient(from var(--hdr-angle),
-        rgba(148,163,184,.28) 0deg,
-        rgba(148,163,184,.28) 210deg,
-        #60a5fa 292deg,
-        #a5b4fc 322deg,
-        #eaf6ff 344deg,
-        #67e8f9 351deg,
-        #60a5fa 360deg);
+        rgba(148,163,184,.20) 0deg,
+        rgba(148,163,184,.20) 110deg,
+        rgba(192,132,252,.45) 185deg,
+        rgba(56,189,248,.80) 250deg,
+        rgba(224,247,255,1) 300deg,
+        rgba(45,212,191,.80) 332deg,
+        rgba(129,140,248,.45) 352deg,
+        rgba(148,163,184,.20) 360deg);
       -webkit-mask:
         linear-gradient(#000 0 0) content-box,
         linear-gradient(#000 0 0);
@@ -130,11 +135,85 @@
               mask-composite: exclude;
       z-index: -1;
       pointer-events: none;
-      animation: hdr-rotate 5.5s linear infinite;
+      animation: hdr-rotate 6.5s linear infinite;
+    }
+
+    /* Second, counter-rotating multi-colour comet — only lit when there's an
+       active preisfehler, for a "something's happening" burst. */
+    .hdr-fx {
+      position: absolute;
+      inset: -7px;
+      border-radius: 24px;
+      pointer-events: none;
+      z-index: -3;
+      opacity: 0;
+      transition: opacity .55s ease;
+      background: conic-gradient(from var(--hdr-angle2),
+        transparent 0deg,
+        rgba(244,114,182,.0) 25deg,
+        rgba(244,114,182,.50) 110deg,
+        rgba(250,204,21,.55) 185deg,
+        rgba(52,211,153,.60) 255deg,
+        rgba(56,189,248,.75) 312deg,
+        rgba(255,255,255,.92) 338deg,
+        rgba(244,114,182,.30) 356deg,
+        transparent 360deg);
+      filter: blur(24px);
+      animation: hdr-rotate2 8s linear infinite;
+    }
+    body.has-active-pf .hdr-fx { opacity: .9; }
+
+    /* Twinkling sparkles around the perimeter — active-preisfehler only. */
+    .hdr-sparkles {
+      position: absolute;
+      inset: -12px;
+      pointer-events: none;
+      z-index: 3;
+      opacity: 0;
+      transition: opacity .4s ease;
+    }
+    body.has-active-pf .hdr-sparkles { opacity: 1; }
+    .hdr-sparkles i {
+      position: absolute;
+      width: 13px;
+      height: 13px;
+      display: block;
+      background: radial-gradient(circle, #fff 0%, #e0f2fe 38%, #7dd3fc 64%, transparent 72%);
+      clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
+      opacity: 0;
+      transform: scale(0);
+      filter: drop-shadow(0 0 5px rgba(125,211,252,.95));
+      animation: hdr-sparkle 2.8s ease-in-out infinite;
+    }
+    .hdr-sparkles i:nth-child(1) { left: 4%;   top: -6px;    animation-delay: 0s;    }
+    .hdr-sparkles i:nth-child(2) { left: 22%;  bottom: -7px; animation-delay: .9s;   width: 9px;  height: 9px; }
+    .hdr-sparkles i:nth-child(3) { left: 45%;  top: -9px;    animation-delay: 1.7s;  width: 16px; height: 16px; }
+    .hdr-sparkles i:nth-child(4) { left: 63%;  bottom: -6px; animation-delay: .45s;  }
+    .hdr-sparkles i:nth-child(5) { right: 7%;  top: -8px;    animation-delay: 2.2s;  width: 11px; height: 11px; }
+    .hdr-sparkles i:nth-child(6) { right: -3px; top: 40%;    animation-delay: 1.2s;  width: 10px; height: 10px; }
+    .hdr-sparkles i:nth-child(7) { left: -4px; top: 46%;     animation-delay: 2.6s;  }
+    .hdr-sparkles i:nth-child(8) { left: 33%;  top: 55%;     animation-delay: .3s;   width: 8px;  height: 8px; }
+    @keyframes hdr-sparkle {
+      0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+      42%      { opacity: 1; transform: scale(1.05) rotate(70deg); }
+      68%      { opacity: .3; transform: scale(.6) rotate(120deg); }
+    }
+
+    @keyframes hdr-pulse {
+      0%, 100% { box-shadow:
+        0 0 0 1px rgba(96,165,250,.10),
+        0 12px 40px -14px rgba(56,189,248,.42),
+        0 0 52px -8px rgba(34,211,238,.24); }
+      50%      { box-shadow:
+        0 0 0 1px rgba(129,140,248,.18),
+        0 14px 50px -12px rgba(56,189,248,.58),
+        0 0 70px -6px rgba(34,211,238,.36); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .header-wrap::before, .header-wrap::after { animation: none; }
+      .header-wrap::before, .header-wrap::after, .hdr-fx,
+      .hdr-sparkles i, body.has-active-pf header { animation: none; }
+      .hdr-sparkles { opacity: 0; }
     }
 
     header {
@@ -161,6 +240,7 @@
         0 10px 30px -14px rgba(59,130,246,.20),
         0 0 40px -12px rgba(96,165,250,.14);
     }
+    body.has-active-pf header { animation: hdr-pulse 2.8s ease-in-out infinite; }
 
     .header-left {
       display: flex;
@@ -1078,6 +1158,8 @@
 <body>
 
 <div class="header-wrap">
+<div class="hdr-fx" aria-hidden="true"></div>
+<div class="hdr-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 <header>
   <div class="header-left">
     <h1>Mydealz Dashboard</h1>
@@ -1274,7 +1356,9 @@
   // re-render (e.g. the manual X button).
   function refreshPfColumnState() {
     const pf = lastDeals.filter(d => d.source === 'preisfehler');
-    pfColumnCount.textContent = pf.filter(d => !d.is_expired).length;
+    const activeCount = pf.filter(d => !d.is_expired).length;
+    pfColumnCount.textContent = activeCount;
+    document.body.classList.toggle('has-active-pf', activeCount > 0);
     const pfVisible = pf.filter(d => !d.is_expired || !hideExpired || isExpiredButVisible(d)).length;
     document.body.classList.toggle('pf-active', useColumn() && pfVisible > 0);
   }
@@ -1466,6 +1550,7 @@
       grid.style.display = 'grid';
       pfColumnBody.innerHTML = '';
       document.body.classList.remove('pf-active');
+      document.body.classList.remove('has-active-pf');
       hasRenderedOnce = true;
       return;
     }
@@ -1539,7 +1624,9 @@
     const wasPfActive = document.body.classList.contains('pf-active');
     const nowPfActive = columnMode && pfVisible > 0;
     document.body.classList.toggle('pf-active', nowPfActive);
-    pfColumnCount.textContent = pfDeals.filter(d => !d.is_expired).length;
+    const pfActiveCount = pfDeals.filter(d => !d.is_expired).length;
+    pfColumnCount.textContent = pfActiveCount;
+    document.body.classList.toggle('has-active-pf', pfActiveCount > 0);
     if (nowPfActive && !wasPfActive && !prefersReducedMotion) {
       pfColumn.classList.remove('pf-column-entering');
       void pfColumn.offsetWidth;
