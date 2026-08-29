@@ -15,7 +15,1182 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v={{ ver }}">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ============================================================
+       DESIGN TOKENS — one source of truth
+       ============================================================ */
+    :root {
+      /* spacing (4pt) */
+      --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+      --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+      /* radius */
+      --r-1: 6px; --r-2: 8px; --r-3: 10px; --r-4: 12px; --r-5: 14px; --r-6: 16px; --r-pill: 999px;
+      /* type scale */
+      --fs-xs: 0.72rem; --fs-sm: 0.82rem; --fs-md: 0.92rem; --fs-lg: 1.1rem;
+      --fs-xl: 1.35rem; --fs-2xl: 1.9rem; --fs-3xl: 2.6rem;
+      --lh-tight: 1.2; --lh-snug: 1.35;
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-body:    'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      /* motion */
+      --ease-out:    cubic-bezier(0.2, 0, 0, 1);
+      --ease-inout:  cubic-bezier(0.65, 0, 0.35, 1);
+      --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+      --dur-fast: 0.14s; --dur-base: 0.25s; --dur-slow: 0.4s;
+      /* brand accent = the price-error orange, used with conviction */
+      --accent:        #f97316;
+      --accent-bright: #fb923c;
+      --accent-quiet:  rgba(249, 115, 22, 0.14);
+      --accent-ring:   rgba(249, 115, 22, 0.42);
+      --focus:         #7dd3fc;
+
+      /* ---------- Dark theme (default) ---------- */
+      --bg:           #0f1117;
+      --bg-card:      #1a1f2e;
+      --bg-input:     #1e293b;
+      --bg-input-hover: #273549;
+      --border:       rgba(255, 255, 255, 0.09);
+      --border-strong: rgba(255, 255, 255, 0.14);
+      --border-hover: rgba(255, 255, 255, 0.22);
+      --text:         #e6ebf3;
+      --text-muted:   #9aa7ba;
+      --text-faint:   #7c8ba1;
+      --link-hover:   #93c5fd;
+      --price:        #34d399;
+      --discount-bg:  #1e3a5f;
+      --discount-fg:  #93c5fd;
+      --tg-bg:        #1a3a2a;
+      --tg-border:    #2d6a4f;
+      --tg-fg:        #6ee7b7;
+      --tg-hover:     #1f4a38;
+      --active-bg:    #1a2a1a;
+      --spinner-track:#334155;
+      --spinner-head: #93c5fd;
+      --el-1: 0 1px 2px rgba(0,0,0,.24), 0 6px 16px -10px rgba(0,0,0,.4);
+      --el-2: 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45);
+      --el-3: 0 4px 10px rgba(0,0,0,.3), 0 20px 40px -16px rgba(0,0,0,.55);
+      --scrollbar: rgba(255,255,255,.16);
+    }
+
+    /* ---------- Light theme ---------- */
+    body.light {
+      --accent-quiet: rgba(234, 88, 12, 0.10);
+      --accent-ring:  rgba(234, 88, 12, 0.34);
+      --focus:        #0284c7;
+      --bg:           #f1f5f9;
+      --bg-card:      #ffffff;
+      --bg-input:     #eef2f7;
+      --bg-input-hover: #e2e8f0;
+      --border:       rgba(15, 23, 42, 0.10);
+      --border-strong: rgba(15, 23, 42, 0.16);
+      --border-hover: rgba(15, 23, 42, 0.26);
+      --text:         #0f172a;
+      --text-muted:   #475569;
+      --text-faint:   #5b6b82;
+      --link-hover:   #2563eb;
+      --price:        #059669;
+      --discount-bg:  #dbeafe;
+      --discount-fg:  #1d4ed8;
+      --tg-bg:        #dcfce7;
+      --tg-border:    #86efac;
+      --tg-fg:        #15803d;
+      --tg-hover:     #bbf7d0;
+      --active-bg:    #dcfce7;
+      --spinner-track:#cbd5e1;
+      --spinner-head: #2563eb;
+      --el-1: 0 1px 2px rgba(15,23,42,.06), 0 6px 16px -10px rgba(15,23,42,.14);
+      --el-2: 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18);
+      --el-3: 0 4px 10px rgba(15,23,42,.08), 0 20px 40px -18px rgba(15,23,42,.22);
+      --scrollbar: rgba(15,23,42,.2);
+    }
+
+    /* ---------- Global craft ---------- */
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-1); }
+    ::selection { background: var(--accent); color: #fff; }
+    * { scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
+    ::-webkit-scrollbar { width: 9px; height: 9px; }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: var(--r-pill); border: 2px solid transparent; background-clip: content-box; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    /* Freeze decorative animation while the tab is hidden (perf + battery). */
+    body.paused *, body.paused *::before, body.paused *::after { animation-play-state: paused !important; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      padding: 24px 16px;
+      transition: background 0.2s, color 0.2s;
+      /* keep the header's outer glow from ever nudging a horizontal scrollbar */
+      overflow-x: clip;
+    }
+
+    /* ============================================================
+       Header — a restrained travelling light by default; when a price
+       error is live it becomes a deliberate brand-orange signal.
+       ============================================================ */
+    @property --hdr-angle  { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+    @property --hdr-angle2 { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+    @keyframes hdr-rotate  { to { --hdr-angle: 360deg; } }
+    @keyframes hdr-rotate2 { to { --hdr-angle2: -360deg; } }
+
+    .header-wrap {
+      position: relative;
+      max-width: 1100px;
+      margin: 0 auto var(--sp-8);
+      border-radius: 18px;
+      isolation: isolate;
+    }
+
+    /* IDLE: one uniform light band on a faint ring — quiet, neutral, slow. */
+    .header-wrap::before {                       /* outer bloom */
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 20px;
+      background: conic-gradient(from var(--hdr-angle),
+        rgba(148,163,184,.10) 0deg,
+        rgba(148,163,184,.10) 256deg,
+        rgba(186,230,253,.55) 288deg,
+        rgba(186,230,253,.55) 320deg,
+        rgba(148,163,184,.10) 352deg,
+        rgba(148,163,184,.10) 360deg);
+      filter: blur(16px);
+      opacity: .7;
+      z-index: -2;
+      pointer-events: none;
+      animation: hdr-rotate 9s linear infinite;
+    }
+    body.light .header-wrap::before { opacity: .45; }
+
+    .header-wrap::after {                        /* 1.5px definition ring */
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1.5px;
+      background: conic-gradient(from var(--hdr-angle),
+        rgba(148,163,184,.20) 0deg,
+        rgba(148,163,184,.20) 252deg,
+        rgba(226,240,255,.95) 288deg,
+        rgba(226,240,255,.95) 320deg,
+        rgba(148,163,184,.20) 356deg,
+        rgba(148,163,184,.20) 360deg);
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      z-index: -1;
+      pointer-events: none;
+      animation: hdr-rotate 9s linear infinite;
+    }
+
+    /* ACTIVE price error: the light turns brand-orange, speeds up, blooms. */
+    body.has-active-pf .header-wrap::before {
+      inset: -14px;
+      border-radius: 30px;
+      opacity: 1;
+      filter: blur(26px) saturate(1.4) brightness(1.15);
+      animation-duration: 2.6s;
+      background: conic-gradient(from var(--hdr-angle),
+        var(--accent-quiet) 0deg,
+        var(--accent-quiet) 232deg,
+        rgba(251,146,60,.95) 268deg,
+        rgba(253,224,71,.98) 296deg,
+        rgba(249,115,22,.95) 324deg,
+        var(--accent-quiet) 352deg,
+        var(--accent-quiet) 360deg);
+    }
+    body.has-active-pf .header-wrap::after {
+      inset: -1.5px;
+      padding: 2.5px;
+      animation-duration: 2.6s;
+      filter: brightness(1.15) saturate(1.3) drop-shadow(0 0 7px var(--accent-ring));
+      background: conic-gradient(from var(--hdr-angle),
+        var(--accent-quiet) 0deg,
+        var(--accent-quiet) 244deg,
+        #fff3e0 286deg,
+        #ffd7a1 314deg,
+        var(--accent-quiet) 352deg,
+        var(--accent-quiet) 360deg);
+    }
+
+    /* Second, counter-rotating warm comet — active only. */
+    .hdr-fx {
+      position: absolute;
+      inset: -16px;
+      border-radius: 30px;
+      pointer-events: none;
+      z-index: -3;
+      opacity: 0;
+      transition: opacity .5s var(--ease-out);
+      background: conic-gradient(from var(--hdr-angle2),
+        transparent 0deg,
+        transparent 196deg,
+        rgba(249,115,22,.6) 244deg,
+        rgba(253,186,116,.7) 282deg,
+        rgba(254,240,138,.8) 314deg,
+        rgba(255,255,255,.95) 338deg,
+        rgba(249,115,22,.35) 356deg,
+        transparent 360deg);
+      filter: blur(26px);
+      animation: hdr-rotate2 5s linear infinite;
+    }
+    body.has-active-pf .hdr-fx { opacity: .95; }
+
+    /* Twinkling sparkles around the perimeter — active only, warm. */
+    .hdr-sparkles {
+      position: absolute;
+      inset: -16px;
+      pointer-events: none;
+      z-index: 3;
+      opacity: 0;
+      transition: opacity var(--dur-slow) var(--ease-out);
+    }
+    body.has-active-pf .hdr-sparkles { opacity: 1; }
+    .hdr-sparkles i {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      display: block;
+      background: radial-gradient(circle, #fff 0%, #fff3e0 34%, #fdba74 60%, transparent 70%);
+      clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
+      opacity: 0;
+      transform: scale(0);
+      filter: drop-shadow(0 0 6px rgba(253,186,116,1)) drop-shadow(0 0 12px rgba(249,115,22,.55));
+      animation: hdr-sparkle 2.1s var(--ease-inout) infinite;
+    }
+    .hdr-sparkles i:nth-child(1)  { left: 3%;    top: -8px;    animation-delay: 0s;   }
+    .hdr-sparkles i:nth-child(2)  { left: 17%;   bottom: -9px; animation-delay: .7s;  width: 11px; height: 11px; }
+    .hdr-sparkles i:nth-child(3)  { left: 32%;   top: -11px;   animation-delay: 1.3s; width: 19px; height: 19px; }
+    .hdr-sparkles i:nth-child(4)  { left: 47%;   bottom: -8px; animation-delay: .35s; }
+    .hdr-sparkles i:nth-child(5)  { left: 61%;   top: -10px;   animation-delay: 1.6s; width: 13px; height: 13px; }
+    .hdr-sparkles i:nth-child(6)  { left: 76%;   bottom: -9px; animation-delay: .95s; width: 17px; height: 17px; }
+    .hdr-sparkles i:nth-child(7)  { right: 4%;   top: -9px;    animation-delay: 1.9s; }
+    .hdr-sparkles i:nth-child(8)  { right: -5px; top: 38%;     animation-delay: .55s; width: 12px; height: 12px; }
+    .hdr-sparkles i:nth-child(9)  { left: -6px;  top: 44%;     animation-delay: 1.15s; width: 13px; height: 13px; }
+    .hdr-sparkles i:nth-child(10) { left: 89%;   top: 52%;     animation-delay: 2.1s; width: 10px; height: 10px; }
+    @keyframes hdr-sparkle {
+      0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+      40%      { opacity: 1; transform: scale(1.1) rotate(80deg); }
+      70%      { opacity: .25; transform: scale(.55) rotate(130deg); }
+    }
+
+    @keyframes hdr-pulse-active {
+      0%, 100% { box-shadow:
+        0 0 0 1px var(--accent-ring),
+        0 16px 55px -14px rgba(249,115,22,.5),
+        0 0 70px -8px rgba(249,115,22,.28); }
+      50%      { box-shadow:
+        0 0 0 1px rgba(249,115,22,.55),
+        0 22px 74px -10px rgba(249,115,22,.7),
+        0 0 110px 0 rgba(251,146,60,.4); }
+    }
+
+    header {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      padding: var(--sp-4) var(--sp-5);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-6);
+      overflow-x: auto;
+      box-shadow: var(--el-2);
+      transition: box-shadow var(--dur-slow) var(--ease-out);
+    }
+    body.has-active-pf header { animation: hdr-pulse-active 2.6s var(--ease-inout) infinite; }
+
+    /* Screen-edge vignette that pulses once when a new price error lands. */
+    .arrival-vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      pointer-events: none;
+      opacity: 0;
+      box-shadow: inset 0 0 140px 12px var(--accent-ring), inset 0 0 40px rgba(249,115,22,.25);
+    }
+    .arrival-vignette.fire { animation: arrival-flash 1.15s var(--ease-out); }
+    @keyframes arrival-flash {
+      0%   { opacity: 0; }
+      18%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 190px;
+      flex-shrink: 1;
+    }
+
+    header h1 {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 1.2em;
+      flex-wrap: wrap;
+    }
+
+    #sync-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: inline-block;
+      min-width: 140px;
+    }
+
+    .deploy-info {
+      font-size: 0.68rem;
+      color: var(--text-faint);
+    }
+    .deploy-info::before { content: '· '; }
+    .deploy-info:empty { display: none; }
+
+    .countdown-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .countdown-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-faint);
+    }
+
+    #sync-countdown {
+      font-size: 2.6rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      font-family: var(--font-display);
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1;
+      width: 5ch;
+      text-align: center;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    #btn-sync { width: 122px; }
+    #btn-theme { width: 82px; }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    button {
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      border-radius: 7px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    button:hover { background: var(--bg-input-hover); color: var(--text); }
+    button:disabled { opacity: 0.4; cursor: default; }
+
+    .btn-group-icon button {
+      padding: 6px 9px;
+      font-size: 0.9rem;
+    }
+
+    .btn-icon { display: inline-flex; vertical-align: -2px; margin-right: 5px; }
+    .btn-icon svg { width: 14px; height: 14px; display: block; }
+    .btn-icon:only-child { margin-right: 0; }
+    .btn-icon.spin svg { animation: spin .9s linear infinite; }
+
+    #btn-test-tg:hover {
+      background: var(--tg-hover);
+      color: var(--tg-fg);
+    }
+
+
+    .grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 16px;
+    }
+
+    /* ---------- Preisfehler side column ---------- */
+    /* The column is fixed in the empty gutter to the LEFT of the existing
+       1100px grid — the grid keeps its exact size and centred position and
+       never moves. It hugs the grid's left edge with a small gap. Only
+       shown when the viewport is wide enough for the gutter to hold it
+       (see the media query below); narrower screens fall back to rendering
+       preisfehler inside the grid. */
+    #pf-column {
+      position: fixed;
+      left: calc(50% - 774px);   /* 550 (half grid) + 210 (col) + 14 (gap) */
+      top: 20px;
+      width: 210px;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 40px);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      z-index: 40;
+      box-shadow: 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45);
+    }
+    body.light #pf-column {
+      box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18);
+    }
+    body:not(.pf-active) #pf-column { display: none; }
+    /* No room in the gutter → hide the column (JS renders preisfehler in the
+       grid instead at this width). */
+    @media (max-width: 1559px) {
+      #pf-column { display: none !important; }
+    }
+
+    @keyframes pfColumnIn {
+      from { opacity: 0; transform: translateX(-24px); }
+      to   { opacity: 1; transform: none; }
+    }
+    #pf-column.pf-column-entering {
+      animation: pfColumnIn 0.4s cubic-bezier(0.2, 0, 0.2, 1) both;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #pf-column.pf-column-entering { animation: none; }
+    }
+
+    .pf-column-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, transparent, #f9731618);
+      flex-shrink: 0;
+    }
+    .pf-column-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #f97316;
+    }
+    .pf-column-title svg { width: 14px; height: 14px; display: block; }
+    body.light .pf-column-title { color: #ea580c; }
+    .pf-column-count {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+      background: var(--bg-input);
+      border-radius: 6px;
+      padding: 1px 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .pf-column-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    /* Compact card variant used inside the column. Selectors are scoped as
+       .card.pf-card so they outweigh the base .card rules that appear later
+       in this stylesheet. */
+    .card.pf-card {
+      padding: 12px;
+      gap: 7px;
+      border-radius: 11px;
+    }
+    .card.pf-card:hover { transform: none; }
+    .pf-card .title { font-size: 0.82rem; line-height: 1.3; }
+    .pf-card .title a { -webkit-line-clamp: 2; }
+    .pf-card .price-row { gap: 6px; }
+    .pf-card .price-current { font-size: 1.35rem; }
+    .pf-card .price-orig { font-size: 0.75rem; }
+    .pf-card .discount { font-size: 0.8rem; padding: 2px 7px; }
+    .pf-card .shop-link { margin-top: 4px; padding: 3px 8px; font-size: 0.72rem; }
+    .pf-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 0.72rem;
+      color: var(--text-faint);
+    }
+    .pf-meta > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pf-fresh-badge {
+      display: inline-flex;
+      align-items: center;
+      align-self: flex-start;
+      gap: 3px;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #fb923c;
+      background: #f9731622;
+      border: 1px solid #f9731644;
+      border-radius: 5px;
+      padding: 1px 6px;
+      animation: pfBadgePulse 1.6s ease-in-out infinite;
+    }
+    .pf-fresh-badge .card-icon { margin-right: 0; }
+    @keyframes pfBadgePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @media (prefers-reduced-motion: reduce) {
+      .pf-fresh-badge { animation: none; }
+    }
+    /* .card.pf-card.pf-fresh rail + ring styling lives in the unified signal
+       system; here just a whisper of warm tint on the surface. */
+    .card.pf-card.pf-fresh {
+      background: linear-gradient(135deg, var(--bg-card) 82%, var(--accent-quiet) 100%);
+    }
+
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-5);
+      padding: var(--sp-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-3);
+      box-shadow: var(--el-2);
+      transition: border-color var(--dur-base) var(--ease-out),
+                  box-shadow var(--dur-base) var(--ease-out),
+                  transform var(--dur-base) var(--ease-out);
+      /* skip layout/paint for cards scrolled out of view */
+      content-visibility: auto;
+      contain-intrinsic-size: auto 340px;
+    }
+    /* Only genuinely new cards fade+scale in — moved cards use a JS FLIP. */
+    .card.card-entering { animation: cardIn var(--dur-slow) var(--ease-out) both; }
+    .card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-3px);
+      box-shadow: var(--el-3);
+    }
+
+    .card.expired {
+      opacity: 0.45;
+      filter: grayscale(0.6);
+    }
+
+    /* The "Abgelaufene ausblenden" filter hides expired deals — including
+       moderation-deactivated ones — once they're past their grace window.
+       During the window (.expired-grace, dropped by JS when the countdown
+       runs out) the greyed card stays on screen. */
+    body.hide-expired .card.expired:not(.expired-grace) { display: none; }
+
+    #btn-toggle-expired.active {
+      background: var(--tg-hover);
+      color: var(--tg-fg);
+    }
+
+    #btn-toggle-new.active {
+      background: #1e2a3a;
+      color: #93c5fd;
+    }
+    body.light #btn-toggle-new.active {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .badge-new { background: #1e3a5f; color: #93c5fd; }
+    body.light .badge-new { background: #dbeafe; color: #1d4ed8; }
+
+    .posted-ago { color: var(--text-faint); font-style: italic; white-space: nowrap; }
+
+    .card.fading-out {
+      transition: opacity 0.8s, transform 0.8s;
+      opacity: 0;
+      transform: scale(0.97);
+      pointer-events: none;
+    }
+
+    /* ===== Unified card signal system =====
+       One quiet blue rail for every "notable" state, a green rail for
+       just-synced, and the brand-orange rail + ring reserved for an actual
+       price error. The badge row (Neu / heizt auf / viel Diskussion /
+       keyword) carries the specifics — cards never stack competing colours. */
+    .card.source-new,
+    .card.keyword-match,
+    .card.temp-spiking,
+    .card.comment-spiking,
+    .card.burning {
+      box-shadow: var(--el-2), inset 3px 0 0 #3b82f6;
+    }
+    .card.new-this-sync {
+      box-shadow: var(--el-2), inset 3px 0 0 var(--price);
+    }
+    body.showing-new .card.source-preisfehler,
+    .card.pf-card.pf-fresh {
+      border-color: var(--accent-ring);
+      box-shadow: var(--el-2), inset 3px 0 0 var(--accent), 0 0 0 1px var(--accent-quiet);
+    }
+    .card.expired { box-shadow: var(--el-1); }
+
+    .btn-expire {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+    .card { position: relative; }
+    .card:hover .btn-expire { opacity: 1; }
+    .btn-expire:hover { background: #7c2d1233; color: #fca5a5; opacity: 1; }
+    body.light .btn-expire:hover { background: #fee2e2; color: #991b1b; }
+
+    .preisfehler-label {
+      display: none;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #f97316;
+      margin-bottom: 2px;
+    }
+    body.showing-new .card.source-preisfehler .preisfehler-label { display: block; }
+    body.showing-new.light .card.source-preisfehler .preisfehler-label { color: #ea580c; }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      line-height: 1.35;
+      flex: 1;
+      overflow: hidden;
+    }
+    .title a {
+      color: var(--text);
+      text-decoration: none;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+    .title a:hover { color: var(--link-hover); }
+
+    .badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      border-radius: 5px;
+      padding: 2px 7px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .badge-hot { background: #7c2d12; color: #fca5a5; }
+    .badge-expired { background: #374151; color: #9ca3af; }
+    .badge-active { background: #14532d; color: #86efac; }
+    body.light .badge-hot    { background: #fee2e2; color: #991b1b; }
+    body.light .badge-expired{ background: #e2e8f0; color: #64748b; }
+    body.light .badge-active { background: #dcfce7; color: #15803d; }
+
+    .badge-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .avail-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 6px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+    .avail-badge.avail-available { background: #14532d; color: #86efac; }
+    .avail-badge.avail-unavailable { background: #7c2d12; color: #fca5a5; }
+    body.light .avail-badge.avail-available { background: #dcfce7; color: #15803d; }
+    body.light .avail-badge.avail-unavailable { background: #fee2e2; color: #991b1b; }
+
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .price-current {
+      font-family: var(--font-display);
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      font-variant-numeric: tabular-nums;
+      color: var(--price);
+      line-height: 1;
+    }
+    .price-orig {
+      position: relative;
+      display: inline-block;
+      font-size: 0.85rem;
+      color: var(--text-faint);
+    }
+    .price-orig::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; top: 50%;
+      height: 1.5px;
+      background: currentColor;
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: strikeIn 0.5s ease 0.25s forwards;
+    }
+    @keyframes strikeIn { to { transform: scaleX(1); } }
+    .discount {
+      font-family: var(--font-display);
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      background: var(--discount-bg);
+      color: var(--discount-fg);
+      border-radius: 6px;
+      padding: 3px 9px;
+    }
+
+    .meta {
+      font-size: 0.76rem;
+      color: var(--text-faint);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    /* Two fixed rows instead of one big flex-wrap list — which item wraps
+       to a second line used to depend on how long the merchant/category
+       text for that particular card happened to be, so it looked
+       inconsistent from card to card. Each row stays on a single line
+       (nowrap) and its items shrink+ellipsize instead of wrapping, so the
+       whole thing is reliably exactly two lines. */
+    .meta-row { display: flex; flex-wrap: nowrap; gap: 8px; min-width: 0; }
+    /* Direct children only — a descendant selector here would also catch
+       the nested .card-icon (and .expires-countdown) spans and make them
+       independently shrinkable, which squeezed icons down to nothing and
+       chopped the countdown text instead of just ellipsizing whichever
+       whole item doesn't fit. */
+    .meta-row > span {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      min-width: 0;
+      flex-shrink: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .card-icon { display: inline-flex; vertical-align: -2px; margin-right: 4px; flex-shrink: 0; }
+    .card-icon svg { width: 12px; height: 12px; display: block; }
+    .meta-row > span .card-icon { margin-right: 0; }
+
+    .shop-link {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--border);
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .shop-link:hover { background: var(--spinner-head); color: #0f172a; }
+    .hot-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.74rem;
+      color: var(--text-faint);
+    }
+    .hot-bar-bg {
+      flex: 1;
+      height: 5px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .hot-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f97316, #ef4444);
+      border-radius: 3px;
+      transition: width 0.4s;
+    }
+
+    #stats-bar {
+      max-width: 1100px;
+      margin: 0 auto 20px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .stat-chip {
+      flex: 1;
+      min-width: 160px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.24), 0 8px 20px -12px rgba(0,0,0,.4);
+    }
+    body.light .stat-chip {
+      box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 8px 20px -14px rgba(15,23,42,.16);
+    }
+    .stat-chip .stat-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-faint);
+    }
+    .stat-chip .stat-value {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-chip.stat-accent .stat-value { color: var(--price); }
+
+    #error-msg {
+      max-width: 1100px;
+      margin: 60px auto;
+      text-align: center;
+      color: #f87171;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    #loading {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .skeleton-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45);
+    }
+    body.light .skeleton-card {
+      box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18);
+    }
+    .sk-line {
+      height: 14px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--bg-input) 25%, var(--bg-input-hover) 50%, var(--bg-input) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+    }
+    .sk-title  { height: 16px; width: 85%; }
+    .sk-title2 { height: 16px; width: 55%; }
+    .sk-price  { height: 28px; width: 45%; margin-top: 4px; }
+    .sk-meta   { height: 11px; width: 70%; }
+    .sk-meta2  { height: 11px; width: 50%; }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sk-line { animation: none; }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 2px solid var(--spinner-track);
+      border-top-color: var(--spinner-head);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    #log-panel {
+      max-width: 1100px;
+      margin: 0 auto 24px;
+    }
+    .log-inner {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .log-header button {
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+    .log-header button:hover { background: var(--bg-input); color: var(--text); }
+    #log-table-wrap { overflow-x: auto; }
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+    .log-table th {
+      text-align: left;
+      padding: 8px 16px;
+      color: var(--text-faint);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .log-table td {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .log-table tr:last-child td { border-bottom: none; }
+    .log-table tr:hover td { background: var(--bg-input); }
+    .log-num-pos { color: #34d399; font-weight: 600; }
+    .log-zero { color: var(--text-faint); }
+    .log-error { color: #f87171; }
+
+    #settings-panel { max-width: 1100px; margin: 0 auto 24px; }
+    .settings-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .settings-hint { font-size: 0.78rem; color: var(--text-faint); margin: 0; }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-info { display: flex; flex-direction: column; gap: 4px; }
+    .setting-title { font-size: 0.84rem; font-weight: 600; }
+    .setting-section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-faint);
+    }
+
+    .notif-perm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .notif-cat-list { display: flex; flex-direction: column; gap: 8px; }
+    .notif-cat-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .notif-cat { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer; }
+    .notif-cat input { accent-color: var(--spinner-head); cursor: pointer; }
+    .notif-urgent {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.7rem;
+      color: var(--text-faint);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .notif-urgent input { accent-color: #f97316; cursor: pointer; }
+
+    .kw-add-row { display: flex; gap: 8px; }
+    .kw-add-row input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.82rem;
+      color: var(--text);
+      outline: none;
+    }
+    .kw-add-row input:focus { border-color: var(--spinner-head); }
+    .kw-add-row button {
+      background: var(--spinner-head);
+      color: #0f172a;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .kw-add-row button:hover { opacity: 0.85; }
+    #kw-list { display: flex; flex-direction: column; gap: 6px; }
+    .kw-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .kw-item .kw-text { flex: 1; font-size: 0.84rem; font-weight: 500; }
+    .kw-item .kw-text.inactive { opacity: 0.4; text-decoration: line-through; }
+    .kw-toggle {
+      font-size: 0.72rem;
+      padding: 3px 9px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-input-hover);
+      color: var(--text-muted);
+    }
+    .kw-toggle.on { background: #14532d; border-color: #22c55e; color: #86efac; }
+    body.light .kw-toggle.on { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+    .kw-del { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 0.85rem; padding: 2px 6px; border-radius: 4px; }
+    .kw-del:hover { background: #7c2d1233; color: #fca5a5; }
+.keyword-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: #3b1f6a;
+      color: #c4b5fd;
+      white-space: nowrap;
+    }
+    body.light .keyword-badge { background: #ede9fe; color: #6d28d9; }
+
+    /* Card-level colouring for these states is handled by the unified signal
+       system above; here we only style their badges. */
+    .spike-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: #f9731622;
+      color: #fb923c;
+      border: 1px solid #f9731644;
+      border-radius: 5px;
+      padding: 1px 6px;
+      margin-bottom: 4px;
+    }
+    .comment-spike-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: #ec489922;
+      color: #f472b6;
+      border: 1px solid #ec489944;
+      border-radius: 5px;
+      padding: 1px 6px;
+      margin-bottom: 4px;
+    }
+    /* >200° — the temperature itself is the signal: a hotter rail + a small
+       breathing glow, not a whole-card strobe. */
+    .card.burning {
+      box-shadow: var(--el-2), inset 3px 0 0 #ef4444, 0 0 24px -6px rgba(239,68,68,.35);
+      animation: cardBurn 2.4s var(--ease-inout) infinite;
+    }
+    @keyframes cardBurn {
+      0%, 100% { box-shadow: var(--el-2), inset 3px 0 0 #ef4444, 0 0 22px -8px rgba(239,68,68,.3); }
+      50%      { box-shadow: var(--el-2), inset 3px 0 0 #f97316, 0 0 34px -4px rgba(249,115,22,.45); }
+    }
+
+    .updated-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: #1e3a5f66;
+      color: var(--link-hover);
+      border: 1px solid #3b82f655;
+      border-radius: 5px;
+      padding: 1px 6px;
+      margin-bottom: 4px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
 
@@ -186,7 +1361,1140 @@
 
 <div class="grid" id="grid" style="display:none"></div>
 
-<script src="/static/app.js?v={{ ver }}" defer></script>
+<script>
+  const grid = document.getElementById('grid');
+  const loading = document.getElementById('loading');
+  const errorMsg = document.getElementById('error-msg');
+  const syncStatus = document.getElementById('sync-status');
+  const deployInfo = document.getElementById('deploy-info');
+  const syncCountdown = document.getElementById('sync-countdown');
+  const btnSync = document.getElementById('btn-sync');
+  const pfColumn = document.getElementById('pf-column');
+  const pfColumnBody = document.getElementById('pf-column-body');
+  const pfColumnCount = document.getElementById('pf-column-count');
+  const srLive = document.getElementById('sr-live');
+  const arrivalVignette = document.querySelector('.arrival-vignette');
+  const motionOK = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  // Animated counter — tweens pfColumnCount to a new value instead of snapping.
+  function setPfCount(n) {
+    const from = parseInt(pfColumnCount.textContent, 10) || 0;
+    if (from === n || !motionOK) { pfColumnCount.textContent = n; return; }
+    const start = performance.now(), dur = 420;
+    (function step(t) {
+      const k = Math.min(1, (t - start) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      pfColumnCount.textContent = Math.round(from + (n - from) * eased);
+      if (k < 1) requestAnimationFrame(step);
+    })(start);
+  }
+
+  // Choreographed "a price error just landed" moment: one screen-edge
+  // vignette pulse + a screen-reader announcement. The glow igniting orange
+  // and the count ticking up happen via has-active-pf / setPfCount.
+  const _arrivalSeen = (() => {
+    try { return new Set(JSON.parse(localStorage.getItem('arrivalSeen') || '[]')); }
+    catch { return new Set(); }
+  })();
+  function choreographArrivals(deals) {
+    const fresh = [];
+    for (const d of deals) {
+      if (d.source !== 'preisfehler' || d.is_expired) continue;
+      if (_arrivalSeen.has(d.thread_id)) continue;
+      _arrivalSeen.add(d.thread_id);
+      fresh.push(d);
+    }
+    if (!fresh.length) return;
+    let ids = Array.from(_arrivalSeen);
+    if (ids.length > 400) { ids = ids.slice(-400); _arrivalSeen.clear(); ids.forEach(x => _arrivalSeen.add(x)); }
+    localStorage.setItem('arrivalSeen', JSON.stringify(ids));
+
+    if (!hasRenderedOnce) return;   // don't fire on first paint / reload
+    srLive.textContent = fresh.length === 1
+      ? `Neuer Preisfehler: ${fresh[0].title}, ${fresh[0].price_fmt}`
+      : `${fresh.length} neue Preisfehler`;
+    if (motionOK && arrivalVignette) {
+      arrivalVignette.classList.remove('fire');
+      void arrivalVignette.offsetWidth;
+      arrivalVignette.classList.add('fire');
+    }
+  }
+
+  // A preisfehler counts as "frisch reingekommen" (orange glow + Neu-Badge)
+  // for this long after it was published.
+  const PF_FRESH_SECS = 8 * 60;
+
+  // After a deal expires it stays visible (greyed, with a countdown) for
+  // this long before the "Abgelaufene ausblenden" filter takes effect.
+  const EXPIRED_GRACE_SECS = 30 * 60;
+
+  // Expired (normal expiry OR moderation removal), but still inside its
+  // grace window — shown greyed with a countdown instead of being filtered
+  // out. Once the window passes, the "Abgelaufene ausblenden" filter hides
+  // it like any other expired deal.
+  function isExpiredButVisible(d) {
+    if (!d.is_expired || !d.expired_at) return false;
+    if (d.manually_expired) return false;   // dismissed by the user — stay gone
+    return d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000 > Date.now();
+  }
+
+  // Recompute the column's count + collapsed state from lastDeals. Call
+  // after anything that changes a preisfehler's expiry without a full
+  // re-render (e.g. the manual X button).
+  function refreshPfColumnState() {
+    const pf = lastDeals.filter(d => d.source === 'preisfehler');
+    const activeCount = pf.filter(d => !d.is_expired).length;
+    setPfCount(activeCount);
+    document.body.classList.toggle('has-active-pf', activeCount > 0);
+    const pfVisible = pf.filter(d => !d.is_expired || !hideExpired || isExpiredButVisible(d)).length;
+    document.body.classList.toggle('pf-active', useColumn() && pfVisible > 0);
+  }
+
+  let nextSyncTime = null;
+  let fastPolling = false;
+
+  function startCountdown() {
+    clearInterval(startCountdown._timer);
+    startCountdown._timer = setInterval(() => {
+      if (!nextSyncTime) { syncCountdown.textContent = '–:––'; return; }
+      const secs = Math.round((nextSyncTime - Date.now()) / 1000);
+      if (secs <= 0) {
+        syncCountdown.innerHTML = `<span style="display:inline-flex;vertical-align:-0.08em">${ICON_HOURGLASS.replace('<svg ', '<svg width="0.85em" height="0.85em" ')}</span>`;
+        if (!fastPolling) {
+          fastPolling = true;
+          const poll = setInterval(async () => {
+            await loadSyncStatus();
+            const res = await fetch('/api/sync/status');
+            const s = await res.json();
+            if (!s.is_running && s.next_sync && new Date(s.next_sync).getTime() > Date.now()) {
+              clearInterval(poll);
+              fastPolling = false;
+              await loadDeals();
+            }
+          }, 2000);
+        }
+        return;
+      }
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      syncCountdown.textContent = `${m}:${String(s).padStart(2,'0')}`;
+    }, 1000);
+  }
+  startCountdown();
+
+  let showNewDeals = true;
+
+  const ICON_ZAP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+  const ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
+  const ICON_FLAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>';
+  const ICON_ALERT_TRIANGLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  const ICON_TRENDING_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+  const ICON_SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+  const ICON_X_SMALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  const ICON_SHOPPING_BAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+  const ICON_TAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>';
+  const ICON_CALENDAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  const ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  const ICON_HOURGLASS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12"/><path d="M6 22h12"/><path d="M6 2c0 5 4 6 6 10-2 4-6 5-6 10"/><path d="M18 2c0 5-4 6-6 10 2 4 6 5 6 10"/></svg>';
+  const ICON_EXTERNAL_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+  const ICON_THERMOMETER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>';
+  const ICON_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+
+  async function loadDeals() {
+    try {
+      const url = showNewDeals ? '/api/deals?include_new=1' : '/api/deals';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(res.status);
+      const deals = await res.json();
+      renderDeals(deals);
+    } catch (e) {
+      loading.style.display = 'none';
+      errorMsg.style.display = 'block';
+    }
+  }
+
+  let hasRenderedOnce = false;
+  let lastDeals = [];
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function buildCardHtml(d, editedBadge) {
+    const expired = d.is_expired;
+    const hot = d.is_hot;
+    const isNew = d.source === 'new';
+    const badge = expired
+      ? `<span class="badge badge-expired">${d.moderation_removed ? 'Deaktiviert' : 'Abgelaufen'}</span>`
+      : d.is_new_this_sync
+        ? `<span class="badge badge-new"><span class="card-icon">${ICON_ZAP}</span>Neu</span>`
+        : hot
+          ? `<span class="badge badge-hot"><span class="card-icon">${ICON_FLAME}</span>Hot</span>`
+          : '<span class="badge badge-active">Aktiv</span>';
+    let availBadge = '';
+    if (!isNew && !expired && d.availability_status === 'unavailable') {
+      availBadge = `<span class="avail-badge avail-unavailable" title="Shop-Seite wirkt evtl. ausverkauft/entfernt"><span class="card-icon" style="margin-right:0">${ICON_ALERT}</span></span>`;
+    } else if (!isNew && !expired && d.availability_status === 'available') {
+      availBadge = `<span class="avail-badge avail-available" title="Shop-Seite wirkt noch verfügbar"><span class="card-icon" style="margin-right:0">${ICON_CHECK}</span></span>`;
+    }
+
+    const origPrice = d.next_best_fmt
+      ? `<span class="price-orig">${d.next_best_fmt}</span>` : '';
+    const disc = d.discount_pct
+      ? `<span class="discount">-${d.discount_pct}%</span>` : '';
+
+    const barWidth = d.hot_bar_width || 0;
+    // Hot 'new' deals get a longer display window (1h) than regular new
+    // deals (40 min), but still auto-fade on a timer either way. Expired
+    // deals in their grace window get a timer too, so they fade out when the
+    // grace ends. Whichever comes first wins.
+    let expiresAt = isNew && d.published_at
+      ? d.published_at * 1000 + (hot ? 3600000 : 2400000)
+      : null;
+    const inGrace = isExpiredButVisible(d);
+    if (inGrace) {
+      const graceEnd = d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000;
+      expiresAt = expiresAt ? Math.min(expiresAt, graceEnd) : graceEnd;
+    }
+    const burning = !expired && (d.temperature || 0) > 200;
+
+    return `
+      <div class="card${expired ? ' expired' : ''}${d.moderation_removed ? ' moderation-removed' : ''}${isExpiredButVisible(d) ? ' expired-grace' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}${d.is_comment_spike ? ' comment-spiking' : ''}${burning ? ' burning' : ''}" data-thread-id="${d.thread_id}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
+        <div class="preisfehler-label"><span class="card-icon">${ICON_ALERT_TRIANGLE}</span>Preisfehler</div>
+        ${editedBadge ? `<span class="updated-badge" title="mydealz zeigt auf der Dealseite einen 'Aktualisiert vor …'-Hinweis für diesen Deal"><span class="card-icon">${ICON_REFRESH}</span>Bearbeiteter Deal</span>` : ''}
+        ${d.is_spiking ? `<span class="spike-badge"><span class="card-icon">${ICON_TRENDING_UP}</span>heizt auf</span>` : ''}
+        ${d.is_comment_spike ? `<span class="comment-spike-badge" title="Ungewöhnlich viele neue Kommentare in kurzer Zeit"><span class="card-icon">${ICON_COMMENT}</span>viel Diskussion</span>` : ''}
+        ${d.keyword_match ? `<span class="keyword-badge"><span class="card-icon">${ICON_SEARCH}</span>${esc(d.keyword_match)}</span>` : ''}
+        ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
+        <div class="card-top">
+          <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
+          <div class="badge-group">${availBadge}${badge}</div>
+        </div>
+        <div class="price-row">
+          <span class="price-current">${d.price_fmt}</span>
+          ${origPrice}${disc}
+        </div>
+        <div class="meta">
+          <div class="meta-row">
+            <span><span class="card-icon">${ICON_SHOPPING_BAG}</span>${esc(d.merchant)}</span>
+            <span><span class="card-icon">${ICON_TAG}</span>${esc(d.category || '–')}</span>
+            <span><span class="card-icon">${ICON_CALENDAR}</span>${d.published_fmt}</span>
+          </div>
+          <div class="meta-row">
+            <span><span class="card-icon">${ICON_COMMENT}</span>${d.comment_count || 0}</span>
+            ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at, expiresAt)}</span>` : ''}
+          </div>
+        </div>
+        ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener"><span class="card-icon">${ICON_EXTERNAL_LINK}</span>${esc(d.link_host)}</a>` : ''}
+        <div class="hot-bar-wrap">
+          <span><span class="card-icon">${ICON_THERMOMETER}</span>${Math.round(d.temperature || 0)}°</span>
+          <div class="hot-bar-bg"><div class="hot-bar-fill" style="width:${barWidth}%"></div></div>
+        </div>
+      </div>`;
+  }
+
+  function cardElementFromHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html.trim();
+    return tmp.firstElementChild;
+  }
+
+  function useColumn() {
+    return window.matchMedia('(min-width: 1560px)').matches;
+  }
+
+  // Compact card for the left preisfehler column.
+  function buildPfCardHtml(d, fresh) {
+    const expired = d.is_expired;
+    const origPrice = d.next_best_fmt
+      ? `<span class="price-orig">${d.next_best_fmt}</span>` : '';
+    const disc = d.discount_pct
+      ? `<span class="discount">-${d.discount_pct}%</span>` : '';
+    const graceEnd = isExpiredButVisible(d)
+      ? d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000 : null;
+    return `
+      <div class="card pf-card${expired ? ' expired' : ''}${d.moderation_removed ? ' moderation-removed' : ''}${isExpiredButVisible(d) ? ' expired-grace' : ''}${fresh ? ' pf-fresh' : ''}" data-thread-id="${d.thread_id}"${graceEnd ? ` data-expires="${graceEnd}"` : ''}>
+        ${fresh ? `<span class="pf-fresh-badge"><span class="card-icon">${ICON_ZAP}</span>Neu</span>` : ''}
+        ${expired ? `<span class="badge badge-expired" style="align-self:flex-start">${d.moderation_removed ? 'Deaktiviert' : 'Abgelaufen'}</span>` : ''}
+        ${!expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
+        <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
+        <div class="price-row">
+          <span class="price-current">${d.price_fmt}</span>
+          ${origPrice}${disc}
+        </div>
+        <div class="pf-meta">
+          <span><span class="card-icon">${ICON_SHOPPING_BAG}</span>${esc(d.merchant)}</span>
+          ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at, graceEnd)}</span>` : ''}
+        </div>
+        ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener"><span class="card-icon">${ICON_EXTERNAL_LINK}</span>${esc(d.link_host)}</a>` : ''}
+      </div>`;
+  }
+
+  function renderDeals(deals) {
+    lastDeals = deals;
+    loading.style.display = 'none';
+    const columnMode = useColumn();
+
+    if (!deals.length) {
+      grid.innerHTML = '<p style="color:#64748b;grid-column:1/-1;text-align:center">Keine Deals gefunden.</p>';
+      grid.style.display = 'grid';
+      pfColumnBody.innerHTML = '';
+      document.body.classList.remove('pf-active');
+      document.body.classList.remove('has-active-pf');
+      hasRenderedOnce = true;
+      return;
+    }
+
+    const nowSec = Date.now() / 1000;
+    // Active deals first (newest first), then the greyed-out ones
+    // (expired / moderation-removed) pushed to the very end.
+    const bySort = (a, b) => {
+      const ax = a.is_expired ? 1 : 0, bx = b.is_expired ? 1 : 0;
+      if (ax !== bx) return ax - bx;
+      return (b.published_at || 0) - (a.published_at || 0);
+    };
+
+    // Preisfehler get their own vertical column on the left (wide screens);
+    // on narrow screens they stay mixed into the grid, sorted to the front.
+    const pfDeals = deals.filter(d => d.source === 'preisfehler').sort(bySort);
+    const otherDeals = deals.filter(d => d.source !== 'preisfehler').sort(bySort);
+    const gridDeals = columnMode ? otherDeals : [...pfDeals, ...otherDeals];
+    const colDeals = columnMode ? pfDeals : [];
+
+    // FLIP "First": remember where every card currently sits (grid *and*
+    // column), keyed by thread_id, before we rebuild.
+    const oldRects = new Map();
+    document.querySelectorAll('.card[data-thread-id]').forEach(el => {
+      oldRects.set(el.dataset.threadId, el.getBoundingClientRect());
+    });
+
+    const entries = [];
+
+    const gridFrag = document.createDocumentFragment();
+    let newIdx = 0;
+    gridDeals.forEach(d => {
+      const id = String(d.thread_id);
+      const isNewCard = !oldRects.has(id);
+      const el = cardElementFromHtml(buildCardHtml(d, !!d.is_edited));
+      if (isNewCard) {
+        el.classList.add('card-entering');
+        const delay = hasRenderedOnce ? Math.min(newIdx, 8) * 45 : Math.min(newIdx, 12) * 35;
+        el.style.animationDelay = delay + 'ms';
+        newIdx++;
+      }
+      entries.push({ el, id, isNewCard });
+      gridFrag.appendChild(el);
+    });
+
+    const colFrag = document.createDocumentFragment();
+    let colNewIdx = 0;
+    colDeals.forEach(d => {
+      const id = String(d.thread_id);
+      const isNewCard = !oldRects.has(id);
+      const fresh = !d.is_expired && d.published_at && (nowSec - d.published_at) < PF_FRESH_SECS;
+      const el = cardElementFromHtml(buildPfCardHtml(d, fresh));
+      if (isNewCard) {
+        el.classList.add('card-entering');
+        el.style.animationDelay = Math.min(colNewIdx, 8) * 45 + 'ms';
+        colNewIdx++;
+      }
+      entries.push({ el, id, isNewCard });
+      colFrag.appendChild(el);
+    });
+
+    // "Last": drop the rebuilt cards into grid + column in their new order.
+    grid.innerHTML = '';
+    grid.appendChild(gridFrag);
+    grid.style.display = 'grid';
+    pfColumnBody.innerHTML = '';
+    pfColumnBody.appendChild(colFrag);
+    hasRenderedOnce = true;
+
+    const pfVisible = pfDeals.filter(d => !d.is_expired || !hideExpired || isExpiredButVisible(d)).length;
+    const wasPfActive = document.body.classList.contains('pf-active');
+    const nowPfActive = columnMode && pfVisible > 0;
+    document.body.classList.toggle('pf-active', nowPfActive);
+    const pfActiveCount = pfDeals.filter(d => !d.is_expired).length;
+    setPfCount(pfActiveCount);
+    document.body.classList.toggle('has-active-pf', pfActiveCount > 0);
+    if (nowPfActive && !wasPfActive && !prefersReducedMotion) {
+      pfColumn.classList.remove('pf-column-entering');
+      void pfColumn.offsetWidth;
+      pfColumn.classList.add('pf-column-entering');
+    }
+
+    // "Invert" + "Play": cards that existed before get an inverse transform
+    // applied immediately (so they visually stay put), then animate that
+    // transform back to zero — reads as sliding to the new spot instead of
+    // popping/flickering. When the column appears/disappears the grid slides
+    // sideways the same way. New cards use the fade+scale entrance instead.
+    if (!prefersReducedMotion) {
+      requestAnimationFrame(() => {
+        entries.forEach(({ el, id, isNewCard }) => {
+          if (isNewCard) return;
+          const oldRect = oldRects.get(id);
+          if (!oldRect) return;
+          const newRect = el.getBoundingClientRect();
+          const dx = oldRect.left - newRect.left;
+          const dy = oldRect.top - newRect.top;
+          if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+          el.style.transition = 'none';
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+          requestAnimationFrame(() => {
+            el.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
+            el.style.transform = '';
+            setTimeout(() => { el.style.transition = ''; }, 420);
+          });
+        });
+      });
+    }
+
+    checkBrowserNotifications(deals);
+    checkPreisfehlerAlerts(deals);
+    choreographArrivals(deals);
+    updateStatsBar(deals);
+    loadSyncStatus();
+  }
+
+  function updateStatsBar(deals) {
+    const statsBar = document.getElementById('stats-bar');
+    const activePf = deals.filter(d => d.source === 'preisfehler' && !d.is_expired);
+    if (!activePf.length) { statsBar.style.display = 'none'; return; }
+    const withDiscount = activePf.filter(d => d.discount_pct);
+    const avgDiscount = withDiscount.length
+      ? Math.round(withDiscount.reduce((s, d) => s + d.discount_pct, 0) / withDiscount.length)
+      : null;
+    const mostRecent = activePf.reduce((max, d) => (d.published_at || 0) > max ? d.published_at : max, 0);
+    const agoText = mostRecent ? fmtAgo(Math.max(0, Math.round(Date.now() / 1000 - mostRecent))) : '–';
+    statsBar.innerHTML = `
+      <div class="stat-chip stat-accent">
+        <span class="stat-label">Aktive Preisfehler</span>
+        <span class="stat-value">${activePf.length}</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-label">Ø Rabatt</span>
+        <span class="stat-value">${avgDiscount != null ? avgDiscount + '%' : '–'}</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-label">Letzter Fund</span>
+        <span class="stat-value">${agoText}</span>
+      </div>
+    `;
+    statsBar.style.display = 'flex';
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function loadSyncStatus() {
+    try {
+      const res = await fetch('/api/sync/status');
+      const s = await res.json();
+
+      if (s.deployed_at) {
+        const dt = new Date(s.deployed_at + 'Z');
+        const dtStr = dt.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}) + ' ' +
+                      dt.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+        deployInfo.textContent = s.deploy_commit
+          ? `Deploy ${dtStr} · ${s.deploy_commit}`
+          : `Deploy ${dtStr}`;
+        deployInfo.title = s.deploy_commit ? `Commit ${s.deploy_commit}` : '';
+      }
+
+      if (!s.last_sync) { syncStatus.textContent = 'Noch nicht synchronisiert'; return; }
+      const ts = new Date(s.last_sync + 'Z').toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+      if (s.is_running) {
+        syncStatus.innerHTML = `<span class="card-icon">${ICON_HOURGLASS}</span>Läuft…`;
+      } else {
+        const visible = Array.from(document.querySelectorAll('.card:not(.fading-out)'))
+          .filter(c => getComputedStyle(c).display !== 'none').length;
+        syncStatus.textContent = `✓ ${ts} · ${visible} sichtbar`;
+      }
+      nextSyncTime = s.next_sync ? new Date(s.next_sync).getTime() : null;
+    } catch {}
+  }
+
+  btnSync.addEventListener('click', async () => {
+    const syncIcon = document.getElementById('syncIcon');
+    const syncLabel = document.getElementById('syncLabel');
+    btnSync.disabled = true;
+    syncIcon.classList.add('spin');
+    syncLabel.textContent = ' Läuft…';
+    await fetch('/api/sync', { method: 'POST' });
+    // Poll until sync done
+    const poll = setInterval(async () => {
+      await loadSyncStatus();
+      const res = await fetch('/api/sync/status');
+      const s = await res.json();
+      if (!s.is_running) {
+        clearInterval(poll);
+        btnSync.disabled = false;
+        syncIcon.classList.remove('spin');
+        syncLabel.textContent = ' Jetzt syncen';
+        await loadDeals();
+      }
+    }, 1500);
+  });
+
+  const ICON_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+  const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+  const ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+
+  document.getElementById('btn-test-tg').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-test-tg');
+    const tgIcon = document.getElementById('tgIcon');
+    const tgLabel = document.getElementById('tgLabel');
+    btn.disabled = true;
+    tgIcon.classList.add('spin');
+    tgLabel.textContent = ' Sende…';
+    try {
+      const res = await fetch('/api/telegram/test', { method: 'POST' });
+      const j = await res.json();
+      tgIcon.classList.remove('spin');
+      tgIcon.innerHTML = j.ok ? ICON_CHECK : ICON_ALERT;
+      const parts = [];
+      parts.push(j.telegram.ok ? 'Telegram OK' : `Telegram: ${j.telegram.message}`);
+      parts.push(j.ntfy.ok ? 'ntfy OK' : `ntfy: ${j.ntfy.message}`);
+      tgLabel.textContent = ' ' + parts.join(' · ');
+    } catch {
+      tgIcon.classList.remove('spin');
+      tgIcon.innerHTML = ICON_ALERT;
+      tgLabel.textContent = ' Fehler';
+    }
+    setTimeout(() => {
+      btn.disabled = false;
+      tgIcon.innerHTML = ICON_SEND;
+      tgLabel.textContent = ' Benachrichtigung testen';
+    }, 5000);
+  });
+
+  // Sync log
+  const logPanel = document.getElementById('log-panel');
+  const logTableWrap = document.getElementById('log-table-wrap');
+
+  async function loadLog() {
+    try {
+      const res = await fetch('/api/sync/log');
+      const rows = await res.json();
+      if (!rows.length) {
+        logTableWrap.innerHTML = '<p style="padding:16px;color:var(--text-faint)">Noch keine Syncs aufgezeichnet.</p>';
+        return;
+      }
+      logTableWrap.innerHTML = `
+        <table class="log-table">
+          <thead><tr>
+            <th>Zeit</th>
+            <th>Neue Preisfehler</th>
+            <th>Neue Deals</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody>${rows.map(r => {
+            const t = new Date(r.synced_at + 'Z').toLocaleString('de-DE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+            const err = r.message && r.message !== '' && !r.message.startsWith('OK');
+            const pfNew = r.preisfehler_new;
+            const ndNew = r.new_deals_new;
+            return `<tr>
+              <td>${t}</td>
+              <td class="${pfNew > 0 ? 'log-num-pos' : 'log-zero'}">${pfNew > 0 ? '+' + pfNew : '–'}</td>
+              <td class="${ndNew > 0 ? 'log-num-pos' : 'log-zero'}">${ndNew > 0 ? '+' + ndNew : '–'}</td>
+              <td class="${err ? 'log-error' : ''}">${err ? '❌ ' + esc(r.message) : '✓'}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`;
+    } catch {
+      logTableWrap.innerHTML = '<p style="padding:16px;color:#f87171">Fehler beim Laden.</p>';
+    }
+  }
+
+  document.getElementById('btn-log').addEventListener('click', async () => {
+    const open = logPanel.style.display !== 'none';
+    logPanel.style.display = open ? 'none' : 'block';
+    if (!open) await loadLog();
+  });
+  document.getElementById('btn-log-close').addEventListener('click', () => {
+    logPanel.style.display = 'none';
+  });
+
+  // Settings / Keywords
+  const settingsPanel = document.getElementById('settings-panel');
+  const kwList = document.getElementById('kw-list');
+  const kwInput = document.getElementById('kw-input');
+
+  async function loadKeywords() {
+    const res = await fetch('/api/keywords');
+    const kws = await res.json();
+    if (!kws.length) {
+      kwList.innerHTML = '<p style="font-size:0.78rem;color:var(--text-faint)">Noch keine Keywords konfiguriert.</p>';
+      return;
+    }
+    kwList.innerHTML = kws.map(k => `
+      <div class="kw-item" data-id="${k.id}">
+        <span class="kw-text${k.active ? '' : ' inactive'}">${esc(k.keyword)}</span>
+        <button class="kw-toggle${k.active ? ' on' : ''}" data-id="${k.id}">${k.active ? 'Aktiv' : 'Inaktiv'}</button>
+        <button class="kw-del" data-id="${k.id}" title="Löschen">✕</button>
+      </div>`).join('');
+  }
+
+  const btnFastPollToggle = document.getElementById('btn-fastpoll-toggle');
+
+  async function loadFastPollStatus() {
+    const res = await fetch('/api/fast-poll');
+    const s = await res.json();
+    btnFastPollToggle.classList.toggle('on', s.enabled);
+    btnFastPollToggle.textContent = s.enabled ? 'An' : 'Aus';
+  }
+
+  btnFastPollToggle.addEventListener('click', async () => {
+    const res = await fetch('/api/fast-poll/toggle', { method: 'POST' });
+    const s = await res.json();
+    btnFastPollToggle.classList.toggle('on', s.enabled);
+    btnFastPollToggle.textContent = s.enabled ? 'An' : 'Aus';
+  });
+
+  // Browser notifications (in-tab only, category toggles persisted locally)
+  const NOTIF_CATS = ['preisfehler', 'discount', 'keyword', 'spike', 'any'];
+  let notifPrefs = { preisfehler: false, discount: false, keyword: false, spike: false, any: false };
+  try {
+    notifPrefs = { ...notifPrefs, ...JSON.parse(localStorage.getItem('notifCategories') || '{}') };
+  } catch {}
+
+  const notifCheckboxes = {
+    preisfehler: document.getElementById('notif-cat-preisfehler'),
+    discount: document.getElementById('notif-cat-discount'),
+    keyword: document.getElementById('notif-cat-keyword'),
+    spike: document.getElementById('notif-cat-spike'),
+    any: document.getElementById('notif-cat-any'),
+  };
+  for (const key of NOTIF_CATS) {
+    notifCheckboxes[key].checked = notifPrefs[key];
+    notifCheckboxes[key].addEventListener('change', () => {
+      notifPrefs[key] = notifCheckboxes[key].checked;
+      localStorage.setItem('notifCategories', JSON.stringify(notifPrefs));
+    });
+  }
+
+  let notifUrgent = { preisfehler: true, discount: false, keyword: false, spike: false, any: false };
+  try {
+    notifUrgent = { ...notifUrgent, ...JSON.parse(localStorage.getItem('notifUrgentCategories') || '{}') };
+  } catch {}
+
+  const notifUrgentCheckboxes = {
+    preisfehler: document.getElementById('notif-urgent-preisfehler'),
+    discount: document.getElementById('notif-urgent-discount'),
+    keyword: document.getElementById('notif-urgent-keyword'),
+    spike: document.getElementById('notif-urgent-spike'),
+    any: document.getElementById('notif-urgent-any'),
+  };
+  for (const key of NOTIF_CATS) {
+    notifUrgentCheckboxes[key].checked = notifUrgent[key];
+    notifUrgentCheckboxes[key].addEventListener('change', () => {
+      notifUrgent[key] = notifUrgentCheckboxes[key].checked;
+      localStorage.setItem('notifUrgentCategories', JSON.stringify(notifUrgent));
+    });
+  }
+
+  const btnNotifPermission = document.getElementById('btn-notif-permission');
+  const notifPermStatus = document.getElementById('notifPermStatus');
+
+  function updateNotifPermissionUI() {
+    if (!('Notification' in window)) {
+      notifPermStatus.textContent = 'Berechtigung: nicht unterstützt';
+      btnNotifPermission.style.display = 'none';
+      return;
+    }
+    const perm = Notification.permission;
+    if (perm === 'denied') {
+      // Browsers never re-show the permission dialog once denied — a
+      // clickable "Erlauben" button here would silently do nothing on
+      // click, which looks like a bug. Explain instead of offering a
+      // dead button.
+      notifPermStatus.innerHTML = 'Blockiert — im Browser über das Symbol links neben der Adressleiste (Website-Einstellungen) manuell erlauben.';
+      notifPermStatus.style.color = '#f97316';
+      btnNotifPermission.style.display = 'none';
+      return;
+    }
+    const label = perm === 'granted' ? 'erlaubt' : 'nicht erteilt';
+    notifPermStatus.textContent = `Berechtigung: ${label}`;
+    notifPermStatus.style.color = '';
+    btnNotifPermission.style.display = perm === 'granted' ? 'none' : '';
+  }
+  updateNotifPermissionUI();
+
+  btnNotifPermission.addEventListener('click', async () => {
+    if (!('Notification' in window) || Notification.permission === 'denied') return;
+    await Notification.requestPermission();
+    updateNotifPermissionUI();
+  });
+
+  // Permission can also change outside this page (browser site settings) —
+  // re-check whenever the tab regains focus/visibility instead of only on
+  // load and on button click, so that path updates the UI too.
+  window.addEventListener('focus', updateNotifPermissionUI);
+  document.addEventListener('visibilitychange', () => {
+    // Freeze the decorative glow/sparkle animations while backgrounded.
+    document.body.classList.toggle('paused', document.hidden);
+    if (!document.hidden) updateNotifPermissionUI();
+  });
+
+  // Persisted in localStorage (not just in-memory) so a page reload
+  // doesn't re-fire notifications for deals we already notified about.
+  const _notifiedIds = {};
+  for (const key of NOTIF_CATS) {
+    let seen = [];
+    try {
+      seen = JSON.parse(localStorage.getItem('notifSeen_' + key) || '[]');
+    } catch {}
+    _notifiedIds[key] = new Set(seen);
+  }
+
+  function markNotified(category, threadId) {
+    _notifiedIds[category].add(threadId);
+    let ids = Array.from(_notifiedIds[category]);
+    if (ids.length > 500) {
+      ids = ids.slice(ids.length - 500);
+      _notifiedIds[category] = new Set(ids);
+    }
+    localStorage.setItem('notifSeen_' + category, JSON.stringify(ids));
+  }
+
+  // Native notifications have no border/color styling API — an icon is the
+  // only visual lever available, so it stands in for the "red border" idea.
+  const NOTIF_ICON_URGENT = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><circle cx="96" cy="96" r="80" fill="#ef4444"/></svg>'
+  );
+  const NOTIF_ICON_NORMAL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><circle cx="96" cy="96" r="80" fill="#64748b"/></svg>'
+  );
+
+  const NOTIF_AUTO_CLOSE_MS = 8000;
+
+  function fireBrowserNotification(title, body, url, urgent = false) {
+    try {
+      const n = new Notification(title, {
+        body,
+        requireInteraction: urgent,
+        icon: urgent ? NOTIF_ICON_URGENT : NOTIF_ICON_NORMAL,
+      });
+      n.onclick = () => { window.focus(); window.open(url, '_blank'); n.close(); };
+      // requireInteraction alone isn't reliable across OS/browser combos —
+      // some systems (e.g. macOS with "Dauerhaft" alert style) keep every
+      // notification on screen regardless of it. Actively close non-urgent
+      // ones ourselves so "normal" behaves as auto-dismissing no matter
+      // what the OS-level style is set to.
+      if (!urgent) {
+        setTimeout(() => n.close(), NOTIF_AUTO_CLOSE_MS);
+      }
+    } catch {}
+  }
+
+  document.getElementById('btn-notif-test').addEventListener('click', () => {
+    const btn = document.getElementById('btn-notif-test');
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      updateNotifPermissionUI();
+      return;
+    }
+    fireBrowserNotification('🧪 Test: Normal', 'Sollte automatisch verschwinden.', window.location.href, false);
+    setTimeout(() => {
+      fireBrowserNotification('🧪 Test: Dringend', 'Sollte stehen bleiben, bis du sie wegklickst.', window.location.href, true);
+    }, 500);
+    const original = btn.textContent;
+    btn.textContent = 'Gesendet!';
+    setTimeout(() => { btn.textContent = original; }, 2000);
+  });
+
+  // Gong + voice announcement for new preisfehler — independent of the
+  // Notification API/permission above, since these are just audio.
+  function loadSeenSet(key) {
+    try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch { return new Set(); }
+  }
+  function markSeen(set, key, threadId) {
+    set.add(threadId);
+    localStorage.setItem(key, JSON.stringify(Array.from(set)));
+  }
+
+  let gongEnabled = localStorage.getItem('gongPreisfehler') === 'true';
+  let voiceEnabled = localStorage.getItem('voicePreisfehler') === 'true';
+  let gongSeenIds = loadSeenSet('gongSeen_preisfehler');
+  let voiceSeenIds = loadSeenSet('voiceSeen_preisfehler');
+
+  const gongCheckbox = document.getElementById('gong-preisfehler');
+  gongCheckbox.checked = gongEnabled;
+  gongCheckbox.addEventListener('change', () => {
+    gongEnabled = gongCheckbox.checked;
+    localStorage.setItem('gongPreisfehler', gongEnabled);
+  });
+
+  const gongSoundSelect = document.getElementById('gong-sound');
+  gongSoundSelect.value = localStorage.getItem('gongSound') || 'nbc';
+  gongSoundSelect.addEventListener('change', () => {
+    localStorage.setItem('gongSound', gongSoundSelect.value);
+  });
+
+  const voiceCheckbox = document.getElementById('voice-preisfehler');
+  voiceCheckbox.checked = voiceEnabled;
+  voiceCheckbox.addEventListener('change', () => {
+    voiceEnabled = voiceCheckbox.checked;
+    localStorage.setItem('voicePreisfehler', voiceEnabled);
+  });
+
+  const voiceSelect = document.getElementById('voice-select');
+  voiceSelect.value = localStorage.getItem('ttsVoice') || 'de-CH-LeniNeural';
+  voiceSelect.addEventListener('change', () => {
+    localStorage.setItem('ttsVoice', voiceSelect.value);
+  });
+
+  // Auto-open the shop link for new preisfehler in a new tab. Browsers
+  // block window.open() calls that aren't triggered by a direct click, so
+  // this only actually works once the user has allowed pop-ups for this
+  // site — otherwise it silently no-ops, which the settings hint explains.
+  let autoOpenEnabled = localStorage.getItem('autoOpenPreisfehler') === 'true';
+  let autoOpenSeenIds = loadSeenSet('autoOpenSeen_preisfehler');
+
+  const autoOpenCheckbox = document.getElementById('autoopen-preisfehler');
+  autoOpenCheckbox.checked = autoOpenEnabled;
+  autoOpenCheckbox.addEventListener('change', () => {
+    autoOpenEnabled = autoOpenCheckbox.checked;
+    localStorage.setItem('autoOpenPreisfehler', autoOpenEnabled);
+  });
+
+  const GONG_SOUNDS = {
+    nbc:      { notes: [392.00, 329.63, 261.63], gap: 0.55, decay: 1.4 }, // G4-E4-C4
+    bigben:   { notes: [659.25, 554.37, 587.33, 392.00], gap: 0.6, decay: 1.8 }, // Westminster opening
+    dingdong: { notes: [659.25, 523.25], gap: 0.55, decay: 1.6 }, // E5-C5 doorbell
+    single:   { notes: [196.00], gap: 0, decay: 3.0 }, // one low struck tone
+    mp3:      { file: '/static/sounds/light-hearted-message-tone.mp3' }, // real recorded sound
+  };
+
+  // Returns a Promise that resolves once the gong has finished playing, so
+  // callers (e.g. the voice announcement) can wait for it before continuing.
+  function playGong() {
+    return new Promise((resolve) => {
+      try {
+        const pattern = GONG_SOUNDS[gongSoundSelect.value] || GONG_SOUNDS.nbc;
+        if (pattern.file) {
+          const audio = new Audio(pattern.file);
+          audio.onended = resolve;
+          audio.onerror = resolve;
+          audio.play().catch(resolve);
+          return;
+        }
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 3000;
+        filter.connect(ctx.destination);
+        pattern.notes.forEach((freq, i) => {
+          const start = ctx.currentTime + i * pattern.gap;
+          // Fundamental + a quiet octave overtone for a touch of warmth/shimmer,
+          // simple enough to stay clean instead of sounding harsh.
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(0.5, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + pattern.decay);
+          osc.connect(gain);
+          gain.connect(filter);
+          osc.start(start);
+          osc.stop(start + pattern.decay + 0.1);
+
+          const osc2 = ctx.createOscillator();
+          osc2.type = 'sine';
+          osc2.frequency.value = freq * 2;
+          const gain2 = ctx.createGain();
+          gain2.gain.setValueAtTime(0, start);
+          gain2.gain.linearRampToValueAtTime(0.15, start + 0.02);
+          gain2.gain.exponentialRampToValueAtTime(0.001, start + pattern.decay * 0.7);
+          osc2.connect(gain2);
+          gain2.connect(filter);
+          osc2.start(start);
+          osc2.stop(start + pattern.decay * 0.7 + 0.1);
+        });
+        const totalDuration = (pattern.notes.length - 1) * pattern.gap + pattern.decay + 0.2;
+        setTimeout(resolve, totalDuration * 1000);
+      } catch (e) {
+        resolve();
+      }
+    });
+  }
+
+  function fmtEuroSpoken(value) {
+    return value.toFixed(2).replace('.', ',').replace(',00', '');
+  }
+
+  // Sequential queue so overlapping preisfehler don't talk over each other
+  let _ttsQueue = Promise.resolve();
+
+  async function _speakViaServer(text) {
+    try {
+      await playGong();
+      const resp = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: voiceSelect.value }),
+      });
+      if (!resp.ok) { await playGong(); return; }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      await new Promise((resolve) => {
+        audio.onended = resolve;
+        audio.onerror = resolve;
+        audio.play().catch(resolve);
+      });
+      URL.revokeObjectURL(url);
+      await playGong();
+    } catch (e) {}
+  }
+
+  function speakPreisfehler(d) {
+    let text = `Neuer Preisfehler: ${d.title}`;
+    if (d.price != null) text += ` für ${fmtEuroSpoken(d.price)} Euro`;
+    if (d.next_best && d.price != null && d.next_best > d.price) {
+      text += `. Du sparst ${fmtEuroSpoken(d.next_best - d.price)} Euro`;
+    }
+    _ttsQueue = _ttsQueue.then(() => _speakViaServer(text)).catch(() => {});
+  }
+
+  document.getElementById('btn-gong-test').addEventListener('click', () => playGong());
+  document.getElementById('btn-voice-test').addEventListener('click', () => {
+    speakPreisfehler({ title: 'Test-Artikel', price: 19.99, next_best: 49.99 });
+  });
+
+  function checkPreisfehlerAlerts(deals) {
+    if (!gongEnabled && !voiceEnabled && !autoOpenEnabled) return;
+    for (const d of deals) {
+      if (d.source !== 'preisfehler' || d.is_expired) continue;
+      if (gongEnabled && !gongSeenIds.has(d.thread_id)) {
+        markSeen(gongSeenIds, 'gongSeen_preisfehler', d.thread_id);
+        playGong();
+      }
+      if (voiceEnabled && !voiceSeenIds.has(d.thread_id)) {
+        markSeen(voiceSeenIds, 'voiceSeen_preisfehler', d.thread_id);
+        speakPreisfehler(d);
+      }
+      if (autoOpenEnabled && !autoOpenSeenIds.has(d.thread_id)) {
+        markSeen(autoOpenSeenIds, 'autoOpenSeen_preisfehler', d.thread_id);
+        if (d.shop_url) window.open(d.shop_url, '_blank', 'noopener');
+      }
+    }
+  }
+
+  function checkBrowserNotifications(deals) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    // Firing several Notifications synchronously in the same tick is
+    // unreliable — macOS Notification Center in particular tends to group
+    // or drop all but the most recent one instead of showing each as its
+    // own banner. Stagger them slightly so each gets its own moment.
+    let delay = 0;
+    const STAGGER_MS = 400;
+    const queue = (title, body, url, urgent) => {
+      setTimeout(() => fireBrowserNotification(title, body, url, urgent), delay);
+      delay += STAGGER_MS;
+    };
+    for (const d of deals) {
+      if (notifPrefs.preisfehler && d.source === 'preisfehler' && !d.is_expired
+          && !_notifiedIds.preisfehler.has(d.thread_id)) {
+        markNotified('preisfehler', d.thread_id);
+        queue('🚨 Neuer Preisfehler', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.preisfehler);
+      }
+      if (notifPrefs.discount && d.source === 'new' && !d.is_expired && (d.discount_pct || 0) >= 80
+          && !_notifiedIds.discount.has(d.thread_id)) {
+        markNotified('discount', d.thread_id);
+        queue(`💥 -${d.discount_pct}% Rabatt`, `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.discount);
+      }
+      if (notifPrefs.keyword && d.keyword_match && !d.is_expired && !_notifiedIds.keyword.has(d.thread_id)) {
+        markNotified('keyword', d.thread_id);
+        queue(`🔍 Keyword: "${d.keyword_match}"`, d.title, d.url, notifUrgent.keyword);
+      }
+      if (notifPrefs.spike && d.is_spiking && !d.is_expired && !_notifiedIds.spike.has(d.thread_id)) {
+        markNotified('spike', d.thread_id);
+        queue('🔥 Deal heizt auf', `${d.title} — ${Math.round(d.temperature || 0)}°`, d.url, notifUrgent.spike);
+      }
+      if (notifPrefs.any && !d.is_expired && !_notifiedIds.any.has(d.thread_id)) {
+        markNotified('any', d.thread_id);
+        queue('🧪 Neuer Deal (Test)', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.any);
+      }
+    }
+  }
+
+  document.getElementById('btn-settings').addEventListener('click', async () => {
+    const open = settingsPanel.style.display !== 'none';
+    settingsPanel.style.display = open ? 'none' : 'block';
+    if (!open) { await loadKeywords(); await loadFastPollStatus(); }
+  });
+  document.getElementById('btn-settings-close').addEventListener('click', () => {
+    settingsPanel.style.display = 'none';
+  });
+
+  document.getElementById('btn-kw-add').addEventListener('click', async () => {
+    const kw = kwInput.value.trim();
+    if (!kw) return;
+    await fetch('/api/keywords', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({keyword: kw}) });
+    kwInput.value = '';
+    await loadKeywords();
+  });
+  kwInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-kw-add').click(); });
+
+  kwList.addEventListener('click', async e => {
+    const id = e.target.dataset.id;
+    if (!id) return;
+    if (e.target.classList.contains('kw-del')) {
+      await fetch(`/api/keywords/${id}`, { method: 'DELETE' });
+      await loadKeywords();
+    } else if (e.target.classList.contains('kw-toggle')) {
+      await fetch(`/api/keywords/${id}/toggle`, { method: 'POST' });
+      await loadKeywords();
+    }
+  });
+
+  // New deals toggle
+  const btnToggleNew = document.getElementById('btn-toggle-new');
+
+  function applyNewDealsToggle() {
+    btnToggleNew.classList.toggle('active', showNewDeals);
+    document.body.classList.toggle('showing-new', showNewDeals);
+    document.getElementById('newLabel').textContent = showNewDeals ? 'Neue ausblenden' : 'Neue Deals anzeigen';
+  }
+
+  btnToggleNew.addEventListener('click', async () => {
+    showNewDeals = !showNewDeals;
+    localStorage.setItem('showNewDeals', showNewDeals);
+    applyNewDealsToggle();
+    await loadDeals();
+  });
+
+  applyNewDealsToggle();
+
+  // Manual expire buttons
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-expire');
+    if (!btn) return;
+    const threadId = btn.dataset.id;
+    await fetch(`/api/deals/${threadId}/expire`, {method: 'POST'});
+    const card = btn.closest('.card');
+    // Manual dismissal → the card really goes away (not greyed). Only
+    // genuinely expired / moderated deals get the greyed treatment.
+    btn.remove();
+    card.classList.add('fading-out');
+    setTimeout(() => card.remove(), 800);
+    lastDeals = lastDeals.filter(x => String(x.thread_id) !== String(threadId));
+    updateStatsBar(lastDeals);
+    refreshPfColumnState();
+  });
+
+  function fmtAgo(secs) {
+    if (secs < 60) return `vor ${secs} Sek`;
+    if (secs < 3600) return `vor ${Math.floor(secs / 60)} Min`;
+    return `vor ${Math.floor(secs / 3600)} Std`;
+  }
+
+  function postedAgoHtml(publishedAt, expiresAtMs) {
+    const secs = Math.round((Date.now() - publishedAt * 1000) / 1000);
+    let html = `<span class="card-icon">${ICON_CLOCK}</span>` + fmtAgo(secs);
+    if (expiresAtMs) {
+      const expSecs = Math.round((expiresAtMs - Date.now()) / 1000);
+      if (expSecs > 0) {
+        const mins = Math.max(1, Math.round(expSecs / 60));
+        html += ` <span class="expires-label">(Verschwindet in ${mins} Min)</span>`;
+      }
+    }
+    return html;
+  }
+
+  // Per-card expiry countdown + posted-ago timer — combined into one
+  // "vor X Min (Verschwindet in Y Min)" line under the clock icon
+  // instead of a separate hourglass item.
+  setInterval(() => {
+    if (document.hidden) return;   // nothing visible to update
+    const now = Date.now();
+    document.querySelectorAll('.posted-ago[data-published]').forEach(el => {
+      const cardEl = el.closest('.card');
+      const exp = cardEl && cardEl.dataset.expires ? parseInt(cardEl.dataset.expires) : null;
+      el.innerHTML = postedAgoHtml(parseInt(el.dataset.published), exp);
+    });
+    document.querySelectorAll('.card[data-expires]').forEach(card => {
+      const exp = parseInt(card.dataset.expires);
+      if (now < exp || card.classList.contains('fading-out')) return;
+      if (card.classList.contains('expired')) {
+        // Grace window over — from here the "Abgelaufene ausblenden" filter
+        // decides (CSS). Drop the grace flag + timer and leave the card be.
+        card.classList.remove('expired-grace');
+        card.removeAttribute('data-expires');
+        return;
+      }
+      // Spent 'new' deal that never expired — fade it out and remove.
+      card.classList.add('fading-out');
+      setTimeout(() => card.remove(), 800);
+    });
+    // Drop the "frisch"-highlight off column cards once they age out, without
+    // waiting for the next full re-render.
+    document.querySelectorAll('.pf-card.pf-fresh').forEach(card => {
+      const span = card.querySelector('.posted-ago[data-published]');
+      if (span && (now / 1000 - parseInt(span.dataset.published)) > PF_FRESH_SECS) {
+        card.classList.remove('pf-fresh');
+        const badge = card.querySelector('.pf-fresh-badge');
+        if (badge) badge.remove();
+      }
+    });
+  }, 1000);
+
+  // Theme toggle
+  const btnTheme = document.getElementById('btn-theme');
+  let isLight = localStorage.getItem('theme') === 'light';
+
+  const ICON_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+  const ICON_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+
+  function applyTheme() {
+    document.body.classList.toggle('light', isLight);
+    document.getElementById('themeIcon').innerHTML = isLight ? ICON_MOON : ICON_SUN;
+    document.getElementById('themeLabel').textContent = isLight ? 'Dunkel' : 'Hell';
+  }
+
+  btnTheme.addEventListener('click', () => {
+    isLight = !isLight;
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    applyTheme();
+  });
+
+  applyTheme();
+
+  // Hide expired toggle
+  const btnToggle = document.getElementById('btn-toggle-expired');
+  let hideExpired = true;
+
+  const ICON_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const ICON_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+  function applyToggle() {
+    document.body.classList.toggle('hide-expired', hideExpired);
+    btnToggle.classList.toggle('active', hideExpired);
+    document.getElementById('expiredIcon').innerHTML = hideExpired ? ICON_EYE : ICON_EYE_OFF;
+    document.getElementById('expiredLabel').textContent = hideExpired ? 'Abgelaufene anzeigen' : 'Abgelaufene ausblenden';
+    // A column holding only expired preisfehler should collapse once they're
+    // hidden — re-evaluate whenever the toggle flips.
+    if (lastDeals.length) refreshPfColumnState();
+  }
+
+  btnToggle.addEventListener('click', () => {
+    hideExpired = !hideExpired;
+    localStorage.setItem('hideExpired', hideExpired);
+    applyToggle();
+  });
+
+  applyToggle();
+
+
+  // Crossing the column/no-column breakpoint changes where preisfehler are
+  // rendered — re-run the last render so they move to the right place.
+  window.matchMedia('(min-width: 1560px)').addEventListener('change', () => {
+    if (lastDeals.length) renderDeals(lastDeals);
+  });
+
+  loadDeals();
+  loadSyncStatus();
+  setInterval(loadSyncStatus, 30000);
+</script>
 
 </body>
 </html>

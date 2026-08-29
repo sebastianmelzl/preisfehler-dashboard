@@ -36,7 +36,7 @@ def require_auth():
     Only enforced when DASHBOARD_PASSWORD is set, so local dev without
     the env var keeps working unauthenticated.
     """
-    if request.path in ("/health", "/manifest.webmanifest") or request.path.startswith("/static/"):
+    if request.path in ("/health", "/manifest.webmanifest"):
         return
     password = os.environ.get("DASHBOARD_PASSWORD")
     if not password:
@@ -231,12 +231,9 @@ def run_sync_async():
 # Routes
 # ---------------------------------------------------------------------------
 
-_ASSET_VER = os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:7] or str(int(_deploy_time.timestamp()))
-
-
 @app.route("/")
 def index():
-    return render_template("index.html", ver=_ASSET_VER)
+    return render_template("index.html")
 
 
 @app.route("/manifest.webmanifest")
