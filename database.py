@@ -75,7 +75,8 @@ def init_db():
                 comment_count_updated_at  INTEGER DEFAULT 0,
                 comment_spike_at          INTEGER DEFAULT 0,
                 status_checked_at         INTEGER DEFAULT 0,
-                moderation_removed        INTEGER DEFAULT 0
+                moderation_removed        INTEGER DEFAULT 0,
+                expired_at                INTEGER DEFAULT 0
             )
         """)
         conn.execute("""
@@ -140,6 +141,7 @@ def init_db():
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS comment_spike_at INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS status_checked_at INTEGER DEFAULT 0",
             "ALTER TABLE deals ADD COLUMN IF NOT EXISTS moderation_removed INTEGER DEFAULT 0",
+            "ALTER TABLE deals ADD COLUMN IF NOT EXISTS expired_at INTEGER DEFAULT 0",
         ]:
             conn.execute(col_sql)
     logger.info("Database initialised")
@@ -206,7 +208,8 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
             existing = conn.execute(
                 """SELECT thread_id, source, manually_expired, temperature,
                           temp_spike_notified, temp_updated_at,
-                          comment_count, comment_count_updated_at, comment_spike_at
+                          comment_count, comment_count_updated_at, comment_spike_at,
+                          is_expired, expired_at
                    FROM deals WHERE thread_id = %s""",
                 (d["thread_id"],),
             ).fetchone()
@@ -278,6 +281,13 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                     if rate_5min >= C_SPIKE_PER_5MIN:
                         comment_spike_at = now
 
+                # Stamp expired_at the first time we see a deal flip to
+                # expired, so the dashboard can keep it visible (greyed) for a
+                # grace window before hiding it.
+                expired_at_val = existing["expired_at"] or 0
+                if d["is_expired"] and not existing["is_expired"] and not expired_at_val:
+                    expired_at_val = now
+
                 # Don't overwrite manually expired deals
                 # (source is safe to write here — the "never downgrade" guard
                 # above already skipped preisfehler->new, so this can only
@@ -295,10 +305,11 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
                     conn.execute(
                         """UPDATE deals SET temperature=%s, is_expired=%s, is_hot=%s,
                            temp_updated_at=%s, temp_rate=%s, source=%s, updated_at=%s,
-                           comment_count=%s, comment_count_updated_at=%s, comment_spike_at=%s
+                           comment_count=%s, comment_count_updated_at=%s, comment_spike_at=%s,
+                           expired_at=%s
                            WHERE thread_id=%s""",
                         (d["temperature"], d["is_expired"], d["is_hot"], now, rate, source, d.get("updated_at") or 0,
-                         new_count, now, comment_spike_at, d["thread_id"]),
+                         new_count, now, comment_spike_at, expired_at_val, d["thread_id"]),
                     )
 
     spike_deals = _detect_spikes(candidates)
@@ -306,9 +317,13 @@ def upsert_deals(deals_data, source="preisfehler", sync_seq=0):
 
 
 def mark_expired(thread_id):
+    now = int(time.time())
     with get_conn() as conn:
         conn.execute(
-            "UPDATE deals SET is_expired=1, manually_expired=1 WHERE thread_id=%s", (thread_id,)
+            """UPDATE deals SET is_expired=1, manually_expired=1,
+               expired_at = CASE WHEN expired_at = 0 THEN %s ELSE expired_at END
+               WHERE thread_id=%s""",
+            (now, thread_id),
         )
 
 
@@ -316,12 +331,14 @@ def mark_auto_expired(thread_id, moderation_removed=False):
     """Expire a deal we discovered is gone/expired by re-checking its thread
     page (not via manual action, not via the search API). Left un-flagged as
     manually_expired so it isn't confused with a user click."""
+    now = int(time.time())
     with get_conn() as conn:
         conn.execute(
             """UPDATE deals
-               SET is_expired=1, moderation_removed=%s, status_checked_at=%s
+               SET is_expired=1, moderation_removed=%s, status_checked_at=%s,
+                   expired_at = CASE WHEN expired_at = 0 THEN %s ELSE expired_at END
                WHERE thread_id=%s""",
-            (1 if moderation_removed else 0, int(time.time()), thread_id),
+            (1 if moderation_removed else 0, now, now, thread_id),
         )
 
 
@@ -435,17 +452,23 @@ def mark_notified(thread_ids):
 def get_all_deals(include_new=False):
     with get_conn() as conn:
         if include_new:
-            cutoff = int(time.time()) - 2400
-            hot_cutoff = int(time.time()) - 3600
+            now = int(time.time())
+            cutoff = now - 2400
+            hot_cutoff = now - 3600
+            # Keep an expired 'new' deal around until its dashboard grace
+            # window (30 min from expiry) is over, even if its publish time
+            # has otherwise dropped it out of the feed.
+            grace_cutoff = now - (31 * 60)
             rows = conn.execute(
                 """SELECT * FROM deals
                    WHERE source = 'preisfehler'
                       OR (source = 'new' AND (
                             (is_hot = 0 AND published_at >= %s)
                             OR (is_hot = 1 AND published_at >= %s)
+                            OR (is_expired = 1 AND expired_at >= %s)
                           ))
                    ORDER BY published_at DESC""",
-                (cutoff, hot_cutoff),
+                (cutoff, hot_cutoff, grace_cutoff),
             ).fetchall()
         else:
             rows = conn.execute(

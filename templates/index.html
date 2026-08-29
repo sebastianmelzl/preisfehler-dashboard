@@ -410,7 +410,11 @@
       filter: grayscale(0.6);
     }
 
-    body.hide-expired .card.expired { display: none; }
+    /* The "Abgelaufene ausblenden" filter hides expired deals, but two kinds
+       stay visible (greyed): moderation-deactivated ones (always) and
+       normally-expired ones that are still inside their grace window
+       (.expired-grace, dropped by JS once the countdown runs out). */
+    body.hide-expired .card.expired:not(.moderation-removed):not(.expired-grace) { display: none; }
 
     #btn-toggle-expired.active {
       background: var(--tg-hover);
@@ -1180,6 +1184,20 @@
   // for this long after it was published.
   const PF_FRESH_SECS = 8 * 60;
 
+  // After a deal expires it stays visible (greyed, with a countdown) for
+  // this long before the "Abgelaufene ausblenden" filter takes effect.
+  const EXPIRED_GRACE_SECS = 30 * 60;
+
+  // Expired, but should still be shown greyed rather than filtered out:
+  // moderation-removed deals always, normally-expired ones during the grace
+  // window after they expired.
+  function isExpiredButVisible(d) {
+    if (!d.is_expired) return false;
+    if (d.moderation_removed) return true;
+    return !!d.expired_at &&
+      (d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000 > Date.now());
+  }
+
   let nextSyncTime = null;
   let fastPolling = false;
 
@@ -1272,14 +1290,21 @@
 
     const barWidth = d.hot_bar_width || 0;
     // Hot 'new' deals get a longer display window (1h) than regular new
-    // deals (40 min), but still auto-fade on a timer either way.
-    const expiresAt = isNew && d.published_at
+    // deals (40 min), but still auto-fade on a timer either way. Expired
+    // deals in their grace window get a timer too, so they fade out when the
+    // grace ends. Whichever comes first wins.
+    let expiresAt = isNew && d.published_at
       ? d.published_at * 1000 + (hot ? 3600000 : 2400000)
       : null;
+    const inGrace = isExpiredButVisible(d) && !d.moderation_removed && d.expired_at;
+    if (inGrace) {
+      const graceEnd = d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000;
+      expiresAt = expiresAt ? Math.min(expiresAt, graceEnd) : graceEnd;
+    }
     const burning = !expired && (d.temperature || 0) > 200;
 
     return `
-      <div class="card${expired ? ' expired' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}${d.is_comment_spike ? ' comment-spiking' : ''}${burning ? ' burning' : ''}" data-thread-id="${d.thread_id}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
+      <div class="card${expired ? ' expired' : ''}${d.moderation_removed ? ' moderation-removed' : ''}${isExpiredButVisible(d) ? ' expired-grace' : ''}${isNew ? ' source-new' : ' source-preisfehler'}${d.is_new_this_sync ? ' new-this-sync' : ''}${d.keyword_match ? ' keyword-match' : ''}${d.is_spiking ? ' temp-spiking' : ''}${d.is_comment_spike ? ' comment-spiking' : ''}${burning ? ' burning' : ''}" data-thread-id="${d.thread_id}"${expiresAt ? ` data-expires="${expiresAt}"` : ''}>
         <div class="preisfehler-label"><span class="card-icon">${ICON_ALERT_TRIANGLE}</span>Preisfehler</div>
         ${editedBadge ? `<span class="updated-badge" title="mydealz zeigt auf der Dealseite einen 'Aktualisiert vor …'-Hinweis für diesen Deal"><span class="card-icon">${ICON_REFRESH}</span>Bearbeiteter Deal</span>` : ''}
         ${d.is_spiking ? `<span class="spike-badge"><span class="card-icon">${ICON_TRENDING_UP}</span>heizt auf</span>` : ''}
@@ -1330,8 +1355,10 @@
       ? `<span class="price-orig">${d.next_best_fmt}</span>` : '';
     const disc = d.discount_pct
       ? `<span class="discount">-${d.discount_pct}%</span>` : '';
+    const graceEnd = (isExpiredButVisible(d) && !d.moderation_removed && d.expired_at)
+      ? d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000 : null;
     return `
-      <div class="card pf-card${expired ? ' expired' : ''}${fresh ? ' pf-fresh' : ''}" data-thread-id="${d.thread_id}">
+      <div class="card pf-card${expired ? ' expired' : ''}${d.moderation_removed ? ' moderation-removed' : ''}${isExpiredButVisible(d) ? ' expired-grace' : ''}${fresh ? ' pf-fresh' : ''}" data-thread-id="${d.thread_id}"${graceEnd ? ` data-expires="${graceEnd}"` : ''}>
         ${fresh ? `<span class="pf-fresh-badge"><span class="card-icon">${ICON_ZAP}</span>Neu</span>` : ''}
         ${expired ? `<span class="badge badge-expired" style="align-self:flex-start">${d.moderation_removed ? 'Deaktiviert' : 'Abgelaufen'}</span>` : ''}
         ${!expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
@@ -1342,7 +1369,7 @@
         </div>
         <div class="pf-meta">
           <span><span class="card-icon">${ICON_SHOPPING_BAG}</span>${esc(d.merchant)}</span>
-          ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at, null)}</span>` : ''}
+          ${d.published_at ? `<span class="posted-ago" data-published="${d.published_at}">${postedAgoHtml(d.published_at, graceEnd)}</span>` : ''}
         </div>
         ${d.link_host ? `<a class="shop-link" href="${d.shop_url}" target="_blank" rel="noopener"><span class="card-icon">${ICON_EXTERNAL_LINK}</span>${esc(d.link_host)}</a>` : ''}
       </div>`;
@@ -1421,7 +1448,7 @@
     pfColumnBody.appendChild(colFrag);
     hasRenderedOnce = true;
 
-    const pfVisible = pfDeals.filter(d => !d.is_expired || !hideExpired).length;
+    const pfVisible = pfDeals.filter(d => !d.is_expired || !hideExpired || isExpiredButVisible(d)).length;
     const wasPfActive = document.body.classList.contains('pf-active');
     const nowPfActive = columnMode && pfVisible > 0;
     document.body.classList.toggle('pf-active', nowPfActive);
@@ -2117,11 +2144,17 @@
     });
     document.querySelectorAll('.card[data-expires]').forEach(card => {
       const exp = parseInt(card.dataset.expires);
-      const secs = Math.round((exp - now) / 1000);
-      if (secs <= 0 && !card.classList.contains('fading-out')) {
-        card.classList.add('fading-out');
-        setTimeout(() => card.remove(), 800);
+      if (now < exp || card.classList.contains('fading-out')) return;
+      if (card.classList.contains('expired')) {
+        // Grace window over — from here the "Abgelaufene ausblenden" filter
+        // decides (CSS). Drop the grace flag + timer and leave the card be.
+        card.classList.remove('expired-grace');
+        card.removeAttribute('data-expires');
+        return;
       }
+      // Spent 'new' deal that never expired — fade it out and remove.
+      card.classList.add('fading-out');
+      setTimeout(() => card.remove(), 800);
     });
     // Drop the "frisch"-highlight off column cards once they age out, without
     // waiting for the next full re-render.
@@ -2172,7 +2205,7 @@
     // hidden — re-evaluate whenever the toggle flips.
     if (lastDeals.length) {
       const pf = lastDeals.filter(d => d.source === 'preisfehler');
-      const pfVisible = pf.filter(d => !d.is_expired || !hideExpired).length;
+      const pfVisible = pf.filter(d => !d.is_expired || !hideExpired || isExpiredButVisible(d)).length;
       document.body.classList.toggle('pf-active', useColumn() && pfVisible > 0);
     }
   }
