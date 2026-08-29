@@ -211,39 +211,36 @@
     }
 
     /* ---------- Preisfehler side column ---------- */
-    /* Grid + Preisfehler-Spalte liegen nebeneinander. Ohne aktiven
-       Preisfehler ist die Spalte eingeklappt und das Grid zentriert sich
-       wie gehabt auf 1100px; kommt ein Preisfehler rein, weitet sich das
-       Layout und die bestehende FLIP-Animation gleitet die Grid-Karten
-       nach rechts. */
-    .main-layout {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-    }
-    body.pf-active .main-layout { max-width: 1360px; }
-    .main-layout > .grid { flex: 1; min-width: 0; margin: 0; }
-
+    /* The column is fixed in the empty gutter to the LEFT of the existing
+       1100px grid — the grid keeps its exact size and centred position and
+       never moves. It hugs the grid's left edge with a small gap. Only
+       shown when the viewport is wide enough for the gutter to hold it
+       (see the media query below); narrower screens fall back to rendering
+       preisfehler inside the grid. */
     #pf-column {
-      flex: 0 0 244px;
-      align-self: flex-start;
-      position: sticky;
-      top: 16px;
+      position: fixed;
+      left: calc(50% - 774px);   /* 550 (half grid) + 210 (col) + 14 (gap) */
+      top: 20px;
+      width: 210px;
       display: flex;
       flex-direction: column;
-      max-height: calc(100vh - 32px);
+      max-height: calc(100vh - 40px);
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 14px;
       overflow: hidden;
+      z-index: 40;
       box-shadow: 0 1px 2px rgba(0,0,0,.24), 0 12px 28px -12px rgba(0,0,0,.45);
     }
     body.light #pf-column {
       box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 12px 28px -14px rgba(15,23,42,.18);
     }
     body:not(.pf-active) #pf-column { display: none; }
+    /* No room in the gutter → hide the column (JS renders preisfehler in the
+       grid instead at this width). */
+    @media (max-width: 1559px) {
+      #pf-column { display: none !important; }
+    }
 
     @keyframes pfColumnIn {
       from { opacity: 0; transform: translateX(-24px); }
@@ -362,13 +359,6 @@
       background: linear-gradient(135deg, var(--bg-card) 78%, #fff7ed 100%);
     }
 
-    @media (max-width: 900px) {
-      .main-layout, body.pf-active .main-layout {
-        display: block;
-        max-width: 1100px;
-      }
-      #pf-column { display: none !important; }
-    }
 
     @keyframes cardIn {
       from { opacity: 0; transform: scale(0.98); }
@@ -1154,19 +1144,19 @@
   {% endfor %}
 </div>
 <div id="error-msg">Fehler beim Laden der Deals.</div>
-<div class="main-layout">
-  <aside id="pf-column" aria-label="Aktive Preisfehler">
-    <div class="pf-column-head">
-      <span class="pf-column-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        Preisfehler
-      </span>
-      <span class="pf-column-count" id="pf-column-count">0</span>
-    </div>
-    <div class="pf-column-body" id="pf-column-body"></div>
-  </aside>
-  <div class="grid" id="grid" style="display:none"></div>
-</div>
+
+<aside id="pf-column" aria-label="Aktive Preisfehler">
+  <div class="pf-column-head">
+    <span class="pf-column-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Preisfehler
+    </span>
+    <span class="pf-column-count" id="pf-column-count">0</span>
+  </div>
+  <div class="pf-column-body" id="pf-column-body"></div>
+</aside>
+
+<div class="grid" id="grid" style="display:none"></div>
 
 <script>
   const grid = document.getElementById('grid');
@@ -1344,7 +1334,7 @@
   }
 
   function useColumn() {
-    return window.matchMedia('(min-width: 901px)').matches;
+    return window.matchMedia('(min-width: 1560px)').matches;
   }
 
   // Compact card for the left preisfehler column.
@@ -2220,7 +2210,7 @@
 
   // Crossing the column/no-column breakpoint changes where preisfehler are
   // rendered — re-run the last render so they move to the right place.
-  window.matchMedia('(min-width: 901px)').addEventListener('change', () => {
+  window.matchMedia('(min-width: 1560px)').addEventListener('change', () => {
     if (lastDeals.length) renderDeals(lastDeals);
   });
 
