@@ -410,11 +410,11 @@
       filter: grayscale(0.6);
     }
 
-    /* The "Abgelaufene ausblenden" filter hides expired deals, but two kinds
-       stay visible (greyed): moderation-deactivated ones (always) and
-       normally-expired ones that are still inside their grace window
-       (.expired-grace, dropped by JS once the countdown runs out). */
-    body.hide-expired .card.expired:not(.moderation-removed):not(.expired-grace) { display: none; }
+    /* The "Abgelaufene ausblenden" filter hides expired deals — including
+       moderation-deactivated ones — once they're past their grace window.
+       During the window (.expired-grace, dropped by JS when the countdown
+       runs out) the greyed card stays on screen. */
+    body.hide-expired .card.expired:not(.expired-grace) { display: none; }
 
     #btn-toggle-expired.active {
       background: var(--tg-hover);
@@ -1188,14 +1188,13 @@
   // this long before the "Abgelaufene ausblenden" filter takes effect.
   const EXPIRED_GRACE_SECS = 30 * 60;
 
-  // Expired, but should still be shown greyed rather than filtered out:
-  // moderation-removed deals always, normally-expired ones during the grace
-  // window after they expired.
+  // Expired (normal expiry OR moderation removal), but still inside its
+  // grace window — shown greyed with a countdown instead of being filtered
+  // out. Once the window passes, the "Abgelaufene ausblenden" filter hides
+  // it like any other expired deal.
   function isExpiredButVisible(d) {
-    if (!d.is_expired) return false;
-    if (d.moderation_removed) return true;
-    return !!d.expired_at &&
-      (d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000 > Date.now());
+    if (!d.is_expired || !d.expired_at) return false;
+    return d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000 > Date.now();
   }
 
   let nextSyncTime = null;
@@ -1296,7 +1295,7 @@
     let expiresAt = isNew && d.published_at
       ? d.published_at * 1000 + (hot ? 3600000 : 2400000)
       : null;
-    const inGrace = isExpiredButVisible(d) && !d.moderation_removed && d.expired_at;
+    const inGrace = isExpiredButVisible(d);
     if (inGrace) {
       const graceEnd = d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000;
       expiresAt = expiresAt ? Math.min(expiresAt, graceEnd) : graceEnd;
@@ -1355,7 +1354,7 @@
       ? `<span class="price-orig">${d.next_best_fmt}</span>` : '';
     const disc = d.discount_pct
       ? `<span class="discount">-${d.discount_pct}%</span>` : '';
-    const graceEnd = (isExpiredButVisible(d) && !d.moderation_removed && d.expired_at)
+    const graceEnd = isExpiredButVisible(d)
       ? d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000 : null;
     return `
       <div class="card pf-card${expired ? ' expired' : ''}${d.moderation_removed ? ' moderation-removed' : ''}${isExpiredButVisible(d) ? ' expired-grace' : ''}${fresh ? ' pf-fresh' : ''}" data-thread-id="${d.thread_id}"${graceEnd ? ` data-expires="${graceEnd}"` : ''}>
