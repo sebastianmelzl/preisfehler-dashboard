@@ -1589,9 +1589,17 @@
 
     // FLIP "First": remember where every card currently sits (grid *and*
     // column), keyed by thread_id, before we rebuild.
+    // Only record cards that are actually laid out — a card that was hidden
+    // (an expired deal under the "Abgelaufene ausblenden" filter, or a
+    // preisfehler card parked in the collapsed side column) reports a
+    // zero rect at 0,0. If we kept that, the next render would read it as
+    // "this card was in the top-left corner" and fly it across the screen
+    // even though nothing new arrived. Instead, drop it here so it counts
+    // as a fresh entrance (gentle fade-in in place).
     const oldRects = new Map();
     document.querySelectorAll('.card[data-thread-id]').forEach(el => {
-      oldRects.set(el.dataset.threadId, el.getBoundingClientRect());
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) oldRects.set(el.dataset.threadId, r);
     });
 
     const entries = [];
@@ -1661,6 +1669,7 @@
           const oldRect = oldRects.get(id);
           if (!oldRect) return;
           const newRect = el.getBoundingClientRect();
+          if (newRect.width === 0) return;   // card is hidden now — nothing to slide
           const dx = oldRect.left - newRect.left;
           const dy = oldRect.top - newRect.top;
           if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
