@@ -176,7 +176,7 @@ def run_sync():
             except NameError:
                 pass
             db.touch_status_check(alive_ids)
-            for row in db.get_deals_needing_status_check(alive_ids, limit=12):
+            for row in db.get_deals_needing_status_check(alive_ids, limit=14):
                 status = scraper.check_deal_status(row["url"])
                 if status == "gone":
                     # 404/410 is unambiguous — deal pulled by moderation.

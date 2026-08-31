@@ -353,34 +353,45 @@ def touch_status_check(thread_ids):
         )
 
 
-def get_deals_needing_status_check(exclude_ids, recheck_after_seconds=900, limit=12):
+def get_deals_needing_status_check(exclude_ids, limit=14):
     """Deals we can't confirm live from the current fetch and haven't
     re-checked recently — least-recently-checked first.
 
     Covers active preisfehler (the column's content) and any "new" deal
     that's still inside its dashboard display window, since a moderated deal
     disappears from every listing and only a direct thread-page hit reveals
-    it. Freshly-published preisfehler (<30 min) are skipped — they're still
-    reliably in the search fetch and don't need probing yet."""
+    it.
+
+    Re-check cadence differs by source: preisfehler are fairly stable, so
+    once an hour; "new" deals only live ~40 min on the board and moderation
+    usually nukes them in the first few minutes, so every 4 min while shown.
+    Freshly-published preisfehler (<30 min) are skipped — still reliably in
+    the search fetch."""
     now = int(time.time())
     with get_conn() as conn:
         rows = conn.execute(
             """SELECT thread_id, url, source FROM deals
                WHERE is_expired = 0
                  AND manually_expired = 0
-                 AND status_checked_at < %s
                  AND NOT (thread_id = ANY(%s))
                  AND (
-                       (source = 'preisfehler' AND published_at < %s)
-                       OR (source = 'new' AND (
-                             (is_hot = 0 AND published_at >= %s)
-                             OR (is_hot = 1 AND published_at >= %s)
-                       ))
+                       (source = 'preisfehler'
+                            AND published_at < %s
+                            AND status_checked_at < %s)
+                       OR (source = 'new'
+                            AND status_checked_at < %s
+                            AND (
+                              (is_hot = 0 AND published_at >= %s)
+                              OR (is_hot = 1 AND published_at >= %s)
+                            ))
                  )
                ORDER BY status_checked_at ASC
                LIMIT %s""",
-            (now - recheck_after_seconds, list(exclude_ids) or [""],
-             now - 1800, now - 2400, now - 3600, limit),
+            (list(exclude_ids) or [""],
+             now - 1800, now - 3600,   # preisfehler: min age 30 min, re-check hourly
+             now - 240,                # new deals: re-check every 4 min
+             now - 2400, now - 3600,
+             limit),
         ).fetchall()
     return [dict(r) for r in rows]
 
