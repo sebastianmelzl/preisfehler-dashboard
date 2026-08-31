@@ -1491,7 +1491,7 @@
         ${d.is_spiking ? `<span class="spike-badge"><span class="card-icon">${ICON_TRENDING_UP}</span>heizt auf</span>` : ''}
         ${d.is_comment_spike ? `<span class="comment-spike-badge" title="Ungewöhnlich viele neue Kommentare in kurzer Zeit"><span class="card-icon">${ICON_COMMENT}</span>viel Diskussion</span>` : ''}
         ${d.keyword_match ? `<span class="keyword-badge"><span class="card-icon">${ICON_SEARCH}</span>${esc(d.keyword_match)}</span>` : ''}
-        ${!isNew && !expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
+        ${!isNew ? `<button class="btn-expire" title="${expired ? 'Ausblenden' : 'Als abgelaufen markieren'}" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
         <div class="card-top">
           <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
           <div class="badge-group">${availBadge}${badge}</div>
@@ -1542,7 +1542,7 @@
       <div class="card pf-card${expired ? ' expired' : ''}${d.moderation_removed ? ' moderation-removed' : ''}${isExpiredButVisible(d) ? ' expired-grace' : ''}${fresh ? ' pf-fresh' : ''}" data-thread-id="${d.thread_id}"${graceEnd ? ` data-expires="${graceEnd}"` : ''}>
         ${fresh ? `<span class="pf-fresh-badge"><span class="card-icon">${ICON_ZAP}</span>Neu</span>` : ''}
         ${expired ? `<span class="badge badge-expired" style="align-self:flex-start">${d.moderation_removed ? 'Deaktiviert' : 'Abgelaufen'}</span>` : ''}
-        ${!expired ? `<button class="btn-expire" title="Als abgelaufen markieren" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>` : ''}
+        <button class="btn-expire" title="${expired ? 'Ausblenden' : 'Als abgelaufen markieren'}" data-id="${d.thread_id}"><span class="card-icon" style="margin-right:0">${ICON_X_SMALL}</span></button>
         <div class="title"><a href="${d.url}" target="_blank" rel="noopener">${esc(d.title)}</a></div>
         <div class="price-row">
           <span class="price-current">${d.price_fmt}</span>
