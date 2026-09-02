@@ -16,7 +16,7 @@ HEADERS = {
     ),
     "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, deflate",
     "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"macOS"',
@@ -130,12 +130,23 @@ def _fetch(variables, referer, limit, retries=2):
                 },
                 timeout=20,
             )
-            if resp.status_code == 403 and attempt < retries:
-                # Likely a stale/blocked session — start a fresh one and slow down.
+            if resp.status_code in (401, 403, 429) and attempt < retries:
+                logger.warning("GraphQL %s — resetting session", resp.status_code)
                 _reset_session()
                 time.sleep(5 + attempt * 5)
             resp.raise_for_status()
-            data = resp.json()
+            try:
+                data = resp.json()
+            except ValueError:
+                # Non-JSON body (bot/challenge page, or an encoding we can't
+                # decode). Log a peek, drop the session, and retry fresh.
+                snippet = resp.text[:200].replace("\n", " ")
+                logger.warning("GraphQL non-JSON response (%s, %d bytes): %s",
+                               resp.headers.get("content-type"), len(resp.content), snippet)
+                if attempt < retries:
+                    _reset_session()
+                    time.sleep(5 + attempt * 5)
+                raise
             html_src = data["data"]["searchThreads"]["listHtml"]
             total = data["data"]["searchThreads"]["pagination"]["count"]
             deals = _parse_deals(html_src)[:limit]
