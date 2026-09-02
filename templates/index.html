@@ -1367,13 +1367,21 @@
     return d.expired_at * 1000 + EXPIRED_GRACE_SECS * 1000 > Date.now();
   }
 
+  // Reflect the active-preisfehler count in the browser tab title, e.g.
+  // "Mydealz Dashboard (2)" — nothing appended when there are none.
+  const BASE_TITLE = document.title;
+  function setActiveCount(n) {
+    pfColumnCount.textContent = n;
+    document.title = n > 0 ? `${BASE_TITLE} (${n})` : BASE_TITLE;
+  }
+
   // Recompute the column's count + collapsed state from lastDeals. Call
   // after anything that changes a preisfehler's expiry without a full
   // re-render (e.g. the manual X button).
   function refreshPfColumnState() {
     const pf = lastDeals.filter(d => d.source === 'preisfehler');
     const activeCount = pf.filter(d => !d.is_expired).length;
-    pfColumnCount.textContent = activeCount;
+    setActiveCount(activeCount);
     document.body.classList.toggle('has-active-pf', activeCount > 0);
     const pfVisible = pf.filter(d => !d.is_expired || !hideExpired || isExpiredButVisible(d)).length;
     document.body.classList.toggle('pf-active', useColumn() && pfVisible > 0);
@@ -1565,6 +1573,7 @@
       grid.innerHTML = '<p style="color:#64748b;grid-column:1/-1;text-align:center">Keine Deals gefunden.</p>';
       grid.style.display = 'grid';
       pfColumnBody.innerHTML = '';
+      setActiveCount(0);
       document.body.classList.remove('pf-active');
       document.body.classList.remove('has-active-pf');
       hasRenderedOnce = true;
@@ -1649,7 +1658,7 @@
     const nowPfActive = columnMode && pfVisible > 0;
     document.body.classList.toggle('pf-active', nowPfActive);
     const pfActiveCount = pfDeals.filter(d => !d.is_expired).length;
-    pfColumnCount.textContent = pfActiveCount;
+    setActiveCount(pfActiveCount);
     document.body.classList.toggle('has-active-pf', pfActiveCount > 0);
     if (nowPfActive && !wasPfActive && !prefersReducedMotion) {
       pfColumn.classList.remove('pf-column-entering');
