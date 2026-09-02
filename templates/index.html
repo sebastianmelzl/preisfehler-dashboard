@@ -2256,7 +2256,7 @@
       }
       if (notifPrefs.any && !d.is_expired && !_notifiedIds.any.has(d.thread_id)) {
         markNotified('any', d.thread_id);
-        queue('🧪 Neuer Deal (Test)', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.any);
+        queue('🆕 Neuer Deal', `${d.title} — ${d.price_fmt}`, d.url, notifUrgent.any);
       }
     }
   }
