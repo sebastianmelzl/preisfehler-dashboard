@@ -30,9 +30,16 @@ def _fast_poll_enabled():
 
 def _next_delay_seconds():
     fast = _fast_poll_enabled()
+    # Back off hard when syncs keep failing/returning nothing — that almost
+    # always means mydealz is throttling us, and more requests make it worse.
+    try:
+        if (db.get_sync_status().get("consecutive_empty") or 0) >= 3:
+            return random.randint(1200, 2400)   # 20–40 min cooldown
+    except Exception:
+        pass
     if _is_night():
-        return 300 if fast else 3600
-    return 60 if fast else random.randint(30, 240)
+        return 600 if fast else 3600
+    return 150 if fast else random.randint(150, 360)
 
 
 def _run_and_reschedule():

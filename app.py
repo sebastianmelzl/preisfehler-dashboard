@@ -219,6 +219,14 @@ def run_sync():
         db.set_sync_status(False, message=f"Fehler: {e}")
         db.add_sync_log(0, 0, 0, 0, message=str(e))
         logger.error("Sync failed: %s", e)
+        # A failed fetch (403 / block) counts toward the empty streak so the
+        # scheduler backs off instead of hammering a throttled endpoint.
+        try:
+            consecutive = db.increment_empty_sync()
+            if consecutive == 3:
+                notifier.notify_scraper_warning(consecutive)
+        except Exception:
+            pass
     finally:
         _sync_lock.release()
 
