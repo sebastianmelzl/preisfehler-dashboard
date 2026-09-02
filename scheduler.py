@@ -29,17 +29,23 @@ def _fast_poll_enabled():
 
 
 def _next_delay_seconds():
+    """Adaptive cadence: run tight while syncs succeed, back off the moment
+    mydealz starts throttling us (403 / empty), cool right down if it keeps
+    up. `consecutive_empty` counts both empty results and failed fetches."""
     fast = _fast_poll_enabled()
-    # Back off hard when syncs keep failing/returning nothing — that almost
-    # always means mydealz is throttling us, and more requests make it worse.
     try:
-        if (db.get_sync_status().get("consecutive_empty") or 0) >= 3:
-            return random.randint(1200, 2400)   # 20–40 min cooldown
+        empty = db.get_sync_status().get("consecutive_empty") or 0
     except Exception:
-        pass
+        empty = 0
+
+    if empty >= 3:
+        return random.randint(1200, 2400)   # 20–40 min hard cooldown
+    if empty >= 1:
+        return random.randint(300, 600)     # one bad sync → ease off to 5–10 min
+
     if _is_night():
         return 600 if fast else 3600
-    return 150 if fast else random.randint(150, 360)
+    return 75 if fast else random.randint(75, 150)   # healthy: ~1.5–2.5 min
 
 
 def _run_and_reschedule():
