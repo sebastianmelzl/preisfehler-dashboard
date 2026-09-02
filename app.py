@@ -108,7 +108,7 @@ def run_sync():
             if d:
                 db.mark_edit_checked(tid, scraper.has_thread_update(d["url"]))
 
-        for row in db.get_deals_needing_edit_check():
+        for row in db.get_deals_needing_edit_check(limit=8):
             db.mark_edit_checked(row["thread_id"], scraper.has_thread_update(row["url"]))
 
         if normalised:
@@ -195,7 +195,7 @@ def run_sync():
         # Availability check: re-verify a small batch of active preisfehler
         # deals' shop links haven't gone dead since the last check
         try:
-            due_checks = db.get_deals_needing_availability_check(max_age_seconds=900, limit=10)
+            due_checks = db.get_deals_needing_availability_check(max_age_seconds=1800, limit=5)
             for dd in due_checks:
                 status = scraper.check_availability(dd["shop_url"])
                 db.update_availability(dd["thread_id"], status)
