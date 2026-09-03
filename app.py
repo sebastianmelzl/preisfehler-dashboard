@@ -36,7 +36,7 @@ def require_auth():
     Only enforced when DASHBOARD_PASSWORD is set, so local dev without
     the env var keeps working unauthenticated.
     """
-    if request.path == "/health":
+    if request.path in ("/health", "/manifest.webmanifest") or request.path.startswith("/static/"):
         return
     password = os.environ.get("DASHBOARD_PASSWORD")
     if not password:
@@ -242,6 +242,28 @@ def run_sync_async():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/manifest.webmanifest")
+def manifest():
+    return jsonify({
+        "name": "Mydealz Preisfehler Dashboard",
+        "short_name": "Preisfehler",
+        "description": "Live-Überwachung von mydealz-Preisfehlern und Deals.",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "portrait-primary",
+        "background_color": "#0f1117",
+        "theme_color": "#0f1117",
+        "lang": "de",
+        "icons": [
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"},
+            {"src": "/static/icon-maskable-512.png", "sizes": "512x512",
+             "type": "image/png", "purpose": "maskable"},
+        ],
+    })
 
 
 @app.route("/api/deals")
