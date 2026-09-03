@@ -105,42 +105,34 @@
       isolation: isolate;
     }
 
-    /* Travelling light: ONE uniform bright arc (flat plateau, soft symmetric
-       edges) riding a faint always-lit ring. Seamless 0/360 join and a rigid
-       conic that just rotates, so the band keeps a constant shape + speed. */
-    .header-wrap::before {                       /* outer bloom */
+    /* The glow: a single soft, diffuse hump of light that slowly orbits the
+       header. No hard band and no crisp moving edge on the border — just the
+       halo drifting round. ::after is a plain static hairline for definition. */
+    .header-wrap::before {                       /* the moving halo */
       content: "";
       position: absolute;
-      inset: -5px;
-      border-radius: 22px;
+      inset: -6px;
+      border-radius: 24px;
       background: conic-gradient(from var(--hdr-angle),
-        rgba(96,165,250,.16) 0deg,
-        rgba(96,165,250,.16) 250deg,
-        rgba(103,232,249,.90) 280deg,
-        rgba(103,232,249,.90) 320deg,
-        rgba(96,165,250,.16) 350deg,
-        rgba(96,165,250,.16) 360deg);
-      filter: blur(19px);
-      opacity: .8;
+        rgba(96,165,250,.08) 0deg,
+        rgba(125,211,252,.55) 95deg,
+        rgba(96,165,250,.08) 215deg,
+        rgba(96,165,250,.08) 360deg);
+      filter: blur(24px);
+      opacity: .85;
       z-index: -2;
       pointer-events: none;
-      animation: hdr-rotate 6s linear infinite;
+      animation: hdr-rotate 7s linear infinite;
     }
-    body.light .header-wrap::before { opacity: .5; }
+    body.light .header-wrap::before { opacity: .55; }
 
-    .header-wrap::after {                        /* 1.5px definition ring */
+    .header-wrap::after {                        /* static 1px definition ring */
       content: "";
       position: absolute;
       inset: -1px;
       border-radius: inherit;
-      padding: 1.5px;
-      background: conic-gradient(from var(--hdr-angle),
-        rgba(148,163,184,.22) 0deg,
-        rgba(148,163,184,.22) 248deg,
-        rgba(224,247,255,1) 282deg,
-        rgba(224,247,255,1) 318deg,
-        rgba(148,163,184,.22) 352deg,
-        rgba(148,163,184,.22) 360deg);
+      padding: 1px;
+      background: rgba(148,163,184,.26);
       -webkit-mask:
         linear-gradient(#000 0 0) content-box,
         linear-gradient(#000 0 0);
@@ -148,31 +140,24 @@
               mask-composite: exclude;
       z-index: -1;
       pointer-events: none;
-      animation: hdr-rotate 6s linear infinite;
     }
+    body.light .header-wrap::after { background: rgba(15,23,42,.14); }
 
-    /* ---- Active preisfehler: crank everything way up ---- */
+    /* ---- Active preisfehler: brighter, faster, bigger halo ---- */
     body.has-active-pf .header-wrap::before {
-      inset: -14px;
-      border-radius: 30px;
+      inset: -16px;
+      border-radius: 32px;
       opacity: 1;
-      filter: blur(28px) saturate(1.8) brightness(1.35);
-      animation-duration: 2.2s;
+      filter: blur(30px) saturate(1.5) brightness(1.2);
+      animation-duration: 3s;
       background: conic-gradient(from var(--hdr-angle),
-        rgba(129,140,248,.34) 0deg,
-        rgba(129,140,248,.34) 234deg,
-        rgba(217,70,239,.95) 262deg,
-        rgba(56,189,248,1) 292deg,
-        rgba(45,212,191,.98) 322deg,
-        rgba(129,140,248,.34) 350deg,
-        rgba(129,140,248,.34) 360deg);
+        rgba(129,140,248,.16) 0deg,
+        rgba(56,189,248,.90) 90deg,
+        rgba(45,212,191,.70) 140deg,
+        rgba(129,140,248,.16) 255deg,
+        rgba(129,140,248,.16) 360deg);
     }
-    body.has-active-pf .header-wrap::after {
-      inset: -1.5px;
-      padding: 2.5px;
-      animation-duration: 2.2s;
-      filter: brightness(1.25) saturate(1.5) drop-shadow(0 0 7px rgba(56,189,248,.95));
-    }
+    body.has-active-pf .header-wrap::after { background: rgba(56,189,248,.42); }
 
     /* Second, counter-rotating multi-colour comet — active only. */
     .hdr-fx {
@@ -184,16 +169,14 @@
       opacity: 0;
       transition: opacity .5s ease;
       background: conic-gradient(from var(--hdr-angle2),
-        transparent 0deg,
-        transparent 190deg,
-        rgba(244,114,182,.75) 240deg,
-        rgba(250,204,21,.75) 278deg,
-        rgba(52,211,153,.85) 312deg,
-        rgba(255,255,255,.98) 338deg,
-        rgba(244,114,182,.4) 356deg,
-        transparent 360deg);
-      filter: blur(28px);
-      animation: hdr-rotate2 4.5s linear infinite;
+        rgba(244,114,182,0) 0deg,
+        rgba(244,114,182,.55) 80deg,
+        rgba(250,204,21,.5) 130deg,
+        rgba(52,211,153,.5) 180deg,
+        rgba(244,114,182,0) 275deg,
+        rgba(244,114,182,0) 360deg);
+      filter: blur(34px);
+      animation: hdr-rotate2 5.5s linear infinite;
     }
     body.has-active-pf .hdr-fx { opacity: 1; }
 
