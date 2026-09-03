@@ -143,19 +143,21 @@
     }
     body.light .header-wrap::after { background: rgba(15,23,42,.14); }
 
-    /* ---- Active preisfehler: brighter, faster, bigger halo ---- */
+    /* ---- Active preisfehler: bigger, brighter, multi-colour halo ---- */
     body.has-active-pf .header-wrap::before {
       inset: -16px;
       border-radius: 32px;
       opacity: 1;
-      filter: blur(30px) saturate(1.5) brightness(1.2);
-      animation-duration: 3s;
+      filter: blur(30px) saturate(1.6) brightness(1.15);
+      animation-duration: 4s;
       background: conic-gradient(from var(--hdr-angle),
-        rgba(129,140,248,.16) 0deg,
-        rgba(56,189,248,.90) 90deg,
-        rgba(45,212,191,.70) 140deg,
-        rgba(129,140,248,.16) 255deg,
-        rgba(129,140,248,.16) 360deg);
+        rgba(236,72,153,.78) 0deg,
+        rgba(168,85,247,.78) 60deg,
+        rgba(59,130,246,.82) 120deg,
+        rgba(34,211,238,.82) 180deg,
+        rgba(45,212,191,.76) 240deg,
+        rgba(250,204,21,.72) 300deg,
+        rgba(236,72,153,.78) 360deg);
     }
     body.has-active-pf .header-wrap::after { background: rgba(56,189,248,.42); }
 
